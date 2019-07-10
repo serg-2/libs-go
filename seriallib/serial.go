@@ -2,7 +2,6 @@ package seriallib
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/tarm/serial"
 	"log"
 	"strconv"
