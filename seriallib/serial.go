@@ -14,7 +14,7 @@ func parseString(f string) float64 {
 	return result
 }
 
-func GetPosition(message_type string, port string, baudrate int, stop_after_fail bool) (float64, float64, bool) {
+func GetPosition(message_type string, port string, baudrate int, stop_after_fail bool) ([2]float64, bool) {
 	//Defining message_types
 	var message_length byte
 	var positions [2]byte
@@ -42,7 +42,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		positions = [2]byte{1, 6}
 	default:
 		log.Printf("Message type not supported\n")
-		return 300, 300, false
+		return [2]float64{300, 300}, false
 	}
 	c := &serial.Config{Name: port, Baud: baudrate}
 	s, err := serial.OpenPort(c)
@@ -72,7 +72,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 	for i := 0; !((a[0] == "$GP"+message_type) && (check_valid[a[positions[1]]])); i++ {
 		if i > 25 && !message_flag {
 			log.Printf("NO GP" + message_type + " MESSAGES\n")
-			return 300, 300, false
+			return [2]float64{300, 300}, false
 		}
 		reply, err = reader.ReadBytes('\n')
 		if err != nil {
@@ -88,7 +88,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 			if !check_valid[a[positions[1]]] {
 				log.Printf("Trying to get coordinates.GP"+message_type+" Message:  %v\n", strings.TrimSuffix(string(reply), "\n"))
 				if stop_after_fail {
-					return 300, 300, false
+					return [2]float64{300, 300}, false
 				}
 				time.Sleep(1 * time.Second)
 			}
@@ -101,7 +101,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		a[positions[0]+2] = "-" + a[positions[0]+2]
 	}
 
-	return convertCoordinate(a[positions[0]]), convertCoordinate(a[positions[0]+2]), true
+	return [2]float64{convertCoordinate(a[positions[0]]), convertCoordinate(a[positions[0]+2])}, true
 }
 
 func convertCoordinate(x string) float64 {
