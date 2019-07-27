@@ -85,15 +85,13 @@ func GenerateNMEA(tmp_string string) string {
 
 	//Check Valid input
 	if strlen%6 != 0 {
-		fmt.Println("Input length not an even multiple of 6...")
-		os.Exit(1)
+		panic("Input length not an even multiple of 6...")
 	}
 
 	for i := 0; i < strlen; i++ {
 
 		if !(string(in_string[i]) == "0" || string(in_string[i]) == "1") {
-			fmt.Println("Input contains non-binary value")
-			os.Exit(2)
+			panic("Input contains non-binary value")
 		}
 
 	}
@@ -112,8 +110,7 @@ func GenerateNMEA(tmp_string string) string {
 		}
 		converted, err := strconv.ParseInt(string(in_string[i*6:i*6+6]), 2, 64)
 		if err != nil {
-			fmt.Println("Can't convert to integer")
-			os.Exit(3)
+			panic("Can't convert to integer")
 		}
 		in_buffer = append(in_buffer, converted)
 		//Convert to Char. Special rules
