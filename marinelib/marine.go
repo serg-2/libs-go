@@ -1,6 +1,7 @@
 package marinelib
 
 import "math"
+import "fmt"
 
 const R = 6373000
 
