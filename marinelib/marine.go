@@ -2,6 +2,7 @@ package marinelib
 
 import "math"
 import "fmt"
+import "strconv"
 
 const R = 6373000
 
