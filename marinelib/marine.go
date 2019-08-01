@@ -1,8 +1,11 @@
 package marinelib
 
-import "math"
-import "fmt"
-import "strconv"
+import (
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+)
 
 const R = 6373000
 
@@ -34,10 +37,11 @@ func CalculateBearing(a [2]float64, b [2]float64) float64 {
 }
 
 func EncodeType1(mmsi int, speed float64, longtitude float64, latitude float64, course float64, ts int) string {
-	//Type 18 (1)
-	_typeVessel := fmt.Sprintf("%06b", int(1))
+	//Message Type 1
+	_type := fmt.Sprintf("%06b", int(1))
 	//directive to an AIS transceiver that this message should be rebroadcast
 	_repeat := "00"
+	//MMSI
 	_mmsi := fmt.Sprintf("%030b", mmsi)
 	//Status not defined (15)
 	_status := fmt.Sprintf("%04b", int(15))
@@ -65,7 +69,64 @@ func EncodeType1(mmsi int, speed float64, longtitude float64, latitude float64, 
 	// '11100000000000000110' : Radio status ??
 	_rstatus := "0000000000000000000"
 
-	message := _typeVessel + _repeat + _mmsi + _status + _rot + _speed + _accurancy + _long + _lat + _course + _trueHeading + _ts + _flags + _rstatus
+	message := _type + _repeat + _mmsi + _status + _rot + _speed + _accurancy + _long + _lat + _course + _trueHeading + _ts + _flags + _rstatus
+	return message
+}
+
+func EncodeType24(mmsi int, part string, name string, callsign string, vsize string, vtype int) string {
+	var message string
+	//Type 24
+	_type := fmt.Sprintf("%06b", int(24))
+	//directive to an AIS transceiver that this message should be rebroadcast.  00 = default; 11 = do not repeat any more
+	_repeat := "00"
+	//MMSI
+	_mmsi := fmt.Sprintf("%030b", mmsi)
+	if part == "A" {
+		//Part of Message
+		_part := "00"
+		//Vessel Name. Maximum 120 bit, but for us 116. Maximum 20 characters 6-bit ASCII - REAL. For us 19 charactes 6-bit. Default = not available = @@@@@@@@@@@@@@@@@@@@
+		_name := encodeString(name)
+		//Padding. 160 bits per RFC -> 4 bits padding added during GenerateNMEA. 156 Maximum for us to encode
+		npadding := 160 - 4 - len(_type) - len(_repeat) - len(_mmsi) - len(_part) - len(_name)
+		_padding := strings.Repeat("0", npadding)
+
+		message = _type + _repeat + _mmsi + _part + _name + _padding
+
+	} else {
+		//Part of Message
+		_part := "01"
+		// Vessel Type (Number of Passengers).
+		// 0 = not available or no ship = default. 1-99 = as defined in § 3.3.2. 100-199 = reserved, for regional use. 200-255 = reserved, for future use
+		_vtype := fmt.Sprintf("%08b", vtype)
+		//Vendor ID. Default @@@@@@@. MSB. 18 bits(3 symbols) - manufacture’s mnemonic code. 4 bits - Unit Model Code.20 bits - Serial Number
+		_vendorID := strings.Repeat("0", 42)
+		// Call Sign. 7 six-bit characters. @@@@@@@ = not available = default. Craft associated with a parent vessel should use “A” followed by the last 6 digits of the MMSI of the parent vessel.
+		if len(callsign) > 7 {
+			panic("Length of CallSign exceeds 7 characters")
+		}
+		csign := encodeString(callsign)
+		_callsign := csign + strings.Repeat("0", 42-len(csign))
+		// AIS antenna in the middle of the boat. Dimensions 30 bit. Reference point for reported position
+		_length, err := strconv.Atoi(strings.Split(vsize, "x")[0])
+		if err != nil {
+			panic("Unable to detect vessel size - length")
+		}
+		_width, err := strconv.Atoi(strings.Split(vsize, "x")[1])
+		if err != nil {
+			panic("Unable to detect vessel size - width")
+		}
+		_half_length := fmt.Sprintf("%09b", _length/2)
+		_half_width := fmt.Sprintf("%06b", _width/2)
+		//Type of electronic position fixing device. 0 -Default. 1 = GPS, 2 = GLONASS, 3 = combined GPS/GLONASS, 4 = Loran-C, 5 = Chayka, 6 = integrated navigation system, 7 = surveyed; 8 = Galileo, 9-14 = not used, 15 = internal GNSS
+		// RARE Parameters. Not supported usually
+		//_gps_type := "0111"
+		_gps_type := "0000"
+		//SPARE
+		_spare := "00"
+		//168 bit
+		message = _type + _repeat + _mmsi + _part + _vtype + _vendorID + _callsign + _half_length + _half_length + _half_width + _half_width + _gps_type + _spare
+
+	}
 	return message
 }
 
@@ -79,11 +140,22 @@ func calculateChecksum(sentence string) string {
 	return fmt.Sprintf("%X", sum)
 }
 
+func encodeString(sentence string) string {
+	var encodedString string = ""
+	var index int
+	const vocabulary = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&'()*+,-./0123456789:;<=>?"
+	for _, char := range strings.ToUpper(sentence) {
+		index = strings.Index(vocabulary, string(char))
+		encodedString = encodedString + fmt.Sprintf("%06b", index)
+	}
+	return encodedString
+}
+
 func GenerateNMEA(tmp_string string) string {
 	in_string := []byte(tmp_string)
 	strlen := len(in_string)
 
-	//Check Valid input
+	//Check Valid input. But for 24A this could be wrong!!! TODO
 	if strlen%6 != 0 {
 		panic("Input length not an even multiple of 6...")
 	}
