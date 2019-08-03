@@ -36,7 +36,7 @@ func CalculateBearing(a [2]float64, b [2]float64) float64 {
 	return compass_bearing
 }
 
-func EncodeType1(mmsi int, speed float64, longtitude float64, latitude float64, course float64, ts int) string {
+func EncodeType1(mmsi uint32, speed float64, longtitude float64, latitude float64, course float64, ts int) string {
 	//Message Type 1
 	_type := fmt.Sprintf("%06b", int(1))
 	//directive to an AIS transceiver that this message should be rebroadcast
@@ -73,7 +73,7 @@ func EncodeType1(mmsi int, speed float64, longtitude float64, latitude float64, 
 	return message
 }
 
-func EncodeType24(mmsi int, part string, name string, callsign string, vsize string, vtype int) string {
+func EncodeType24(mmsi uint32, part string, name string, callsign string, vsize string, vtype int) string {
 	var message string
 	//Type 24
 	_type := fmt.Sprintf("%06b", int(24))
