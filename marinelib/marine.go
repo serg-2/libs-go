@@ -84,10 +84,10 @@ func EncodeType24(mmsi uint32, part string, name string, callsign string, vsize 
 	if part == "A" {
 		//Part of Message
 		_part := "00"
-		//Vessel Name. Maximum 120 bit, but for us 116. Maximum 20 characters 6-bit ASCII - REAL. For us 19 charactes 6-bit. Default = not available = @@@@@@@@@@@@@@@@@@@@
+		//Vessel Name. Maximum 120 bit.20 characters 6-bit ASCII. Default = not available = @@@@@@@@@@@@@@@@@@@@
 		_name := encodeString(name)
-		//Padding. 160 bits per RFC -> 4 bits padding added during GenerateNMEA. 156 Maximum for us to encode
-		npadding := 160 - 4 - len(_type) - len(_repeat) - len(_mmsi) - len(_part) - len(_name)
+		//Padding. 160 bits per RFC + 8 bits spare.
+		npadding := 168 - len(_type) - len(_repeat) - len(_mmsi) - len(_part) - len(_name)
 		_padding := strings.Repeat("0", npadding)
 
 		message = _type + _repeat + _mmsi + _part + _name + _padding
