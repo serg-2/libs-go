@@ -115,7 +115,10 @@ func EncodeType24(mmsi uint32, part string, name string, callsign string, vsize 
 		if err != nil {
 			panic("Unable to detect vessel size - width")
 		}
+		// NEXT 30 bits - DIMENSTIONS for main craft. OR! For auxiliary craft - MMSI of MotherSHIP
+		//First - Dimension to Bow. Second - Dimenstion to Stern.
 		_half_length := fmt.Sprintf("%09b", _length/2)
+		//First - Dimension to Port. Second - Dimenstion to Startboard.
 		_half_width := fmt.Sprintf("%06b", _width/2)
 		//Type of electronic position fixing device. 0 -Default. 1 = GPS, 2 = GLONASS, 3 = combined GPS/GLONASS, 4 = Loran-C, 5 = Chayka, 6 = integrated navigation system, 7 = surveyed; 8 = Galileo, 9-14 = not used, 15 = internal GNSS
 		// RARE Parameters. Not supported usually
