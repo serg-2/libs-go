@@ -140,7 +140,7 @@ func calculateChecksum(sentence string) string {
 	for i := 0; i < len(sentence); i++ {
 		sum = sum ^ int(sentence[i])
 	}
-	return fmt.Sprintf("%X", sum)
+	return fmt.Sprintf("%02X", sum)
 }
 
 func encodeString(sentence string) string {
