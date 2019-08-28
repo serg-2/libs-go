@@ -70,7 +70,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 	message_flag := false
 
 	for i := 0; !((a[0] == "$GP"+message_type) && (check_valid[a[positions[1]]])); i++ {
-		if i > 25 && !message_flag {
+		if i > 50 && !message_flag {
 			log.Printf("NO GP" + message_type + " MESSAGES\n")
 			return [2]float64{300, 300}, false
 		}
