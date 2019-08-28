@@ -79,9 +79,14 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 			panic(err)
 		}
 		// DEBUG BLOCK
+		// BAD
 		// reply = []byte("$GPGLL,,,,,123317.000,V,N*78")
-		// reply = []byte("$GPGLL,5539.2373,N,03745.0928,E,123318.000,A,A*5A")
-		// reply = []byte("$GPGLL,5539.2373,S,03745.0928,W,123318.000,A,A*5A")
+		// reply = []byte("$GPGGA,122934.00,3346.78434,N,01634.270,5,E,1,07,4.24,152.0,M,13.2,M,,*51")
+		// GOOD
+		// reply = []byte("$GPGLL,5547.1663,N,03246.0837,E,123318.000,A,A*<CHECKSUM>")
+		// reply = []byte("$GPGGA,123854.00,5427.87439,N,03333.12340,E,1,06,7.67,160.4,M,13.2,M,,*<CHECKSUM>")
+		// reply = []byte("$GPRMC,124402.00,A,5422.27361,N,03531.48171,E,0.020,,280819,,,A*<CHECKSUM>")
+		
 		a = strings.Split(string(reply), ",")
 		if a[0] == "$GP"+message_type {
 			message_flag = true
