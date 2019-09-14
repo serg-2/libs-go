@@ -59,7 +59,8 @@ func EncodeType1(mmsi uint32, speed float64, longtitude float64, latitude float6
 	// Course 0.1 resolution. Course over ground will be 3600 (0xE10) if that data is not available.
 	_course := fmt.Sprintf("%012b", int(course*10))
 	// # 511 (N/A)
-	_trueHeading := "111111111"
+	//_trueHeading := "111111111"
+	_trueHeading := fmt.Sprintf("%09b", int(course))
 	// Second of UTC timestamp
 	_ts := fmt.Sprintf("%06b", int(ts))
 	// "00": manufactor NaN
