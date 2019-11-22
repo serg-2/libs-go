@@ -91,7 +91,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		if a[0][3:6] == message_type {
 			message_flag = true
 			if !check_valid[a[positions[1]]] {
-				log.Printf("Trying to get coordinates.G"+a[0][2]+message_type+" Message:  %v\n", strings.TrimSuffix(string(reply), "\n"))
+				log.Printf("Trying to get coordinates.G"+string([]byte{a[0][2]})+message_type+" Message:  %v\n", strings.TrimSuffix(string(reply), "\n"))
 				if stop_after_fail {
 					return [2]float64{300, 300}, false
 				}
