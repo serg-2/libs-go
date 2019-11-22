@@ -69,9 +69,9 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 	a := make([]string, message_length)
 	message_flag := false
 
-	for i := 0; !((a[0] == "$GP"+message_type) && (check_valid[a[positions[1]]])); i++ {
+	for i := 0; !(((a[0] == "$GP"+message_type) || (a[0] == "$GN"+message_type)) && (check_valid[a[positions[1]]])); i++ {
 		if i > 50 && !message_flag {
-			log.Printf("NO GP" + message_type + " MESSAGES\n")
+			log.Printf("NO GP" + message_type + " OR NO GN" + message_type + " MESSAGES\n")
 			return [2]float64{300, 300}, false
 		}
 		reply, err = reader.ReadBytes('\n')
@@ -86,12 +86,12 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		// reply = []byte("$GPGLL,5547.1663,N,03246.0837,E,123318.000,A,A*<CHECKSUM>")
 		// reply = []byte("$GPGGA,123854.00,5427.87439,N,03333.12340,E,1,06,7.67,160.4,M,13.2,M,,*<CHECKSUM>")
 		// reply = []byte("$GPRMC,124402.00,A,5422.27361,N,03531.48171,E,0.020,,280819,,,A*<CHECKSUM>")
-		
+
 		a = strings.Split(string(reply), ",")
-		if a[0] == "$GP"+message_type {
+		if a[0][3:6] == message_type {
 			message_flag = true
 			if !check_valid[a[positions[1]]] {
-				log.Printf("Trying to get coordinates.GP"+message_type+" Message:  %v\n", strings.TrimSuffix(string(reply), "\n"))
+				log.Printf("Trying to get coordinates.G"+a[0][2]+message_type+" Message:  %v\n", strings.TrimSuffix(string(reply), "\n"))
 				if stop_after_fail {
 					return [2]float64{300, 300}, false
 				}
@@ -123,4 +123,3 @@ func convertCoordinate(x string) float64 {
 	answer := x_final
 	return answer
 }
-
