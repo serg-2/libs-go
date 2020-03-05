@@ -68,7 +68,8 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		log.Printf("Unable to handle error.\n")
 		log.Fatal(err)
 	}
-	log.Printf("Serial port opened.\n")
+        // Now it's opening all the time.
+        // log.Printf("Serial port opened.\n")
 
 	//      n, err := s.Write([]byte("test"))
 	//      if err != nil {
