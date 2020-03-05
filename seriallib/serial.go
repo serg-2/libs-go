@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
+	"syscall"
 )
 
 func parseString(f string) float64 {
@@ -45,10 +47,27 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		return [2]float64{300, 300}, false
 	}
 	c := &serial.Config{Name: port, Baud: baudrate}
+
 	s, err := serial.OpenPort(c)
-	if err != nil {
+	for err != nil {
+		// Check file exists and have access
+		_,check1 := err.(*os.PathError)
+		if check1 {
+			log.Printf("Can't open serial port from config.\nWaiting 10 secs...\n")
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		// Check propriate serial device
+		_,check2 := err.(syscall.Errno)
+		if check2 {
+			log.Printf("Serial port from configuration is not serial port\nWaiting 10 secs...\n")
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		log.Printf("Unable to handle error.\n")
 		log.Fatal(err)
 	}
+	log.Printf("Serial port opened.\n")
 
 	//      n, err := s.Write([]byte("test"))
 	//      if err != nil {
