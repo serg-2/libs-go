@@ -49,6 +49,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 	c := &serial.Config{Name: port, Baud: baudrate}
 
 	s, err := serial.OpenPort(c)
+	// Handle errors
 	for err != nil {
 		// Check file exists and have access
 		_,check1 := err.(*os.PathError)
@@ -94,6 +95,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 			return [2]float64{300, 300}, false
 		}
 		reply, err = reader.ReadBytes('\n')
+
 		if err != nil {
 			panic(err)
 		}
@@ -107,6 +109,12 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		// reply = []byte("$GPRMC,124402.00,A,5422.27361,N,03531.48171,E,0.020,,280819,,,A*<CHECKSUM>")
 
 		a = strings.Split(string(reply), ",")
+
+		if len(a[0]) < 6 {
+			log.Printf("Bad message ID: [%v]\n", a[0])
+			continue
+		}
+
 		if a[0][3:6] == message_type {
 			message_flag = true
 			if !check_valid[a[positions[1]]] {
