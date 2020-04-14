@@ -2,7 +2,9 @@ package seriallib
 
 import (
 	"bufio"
+	"encoding/binary"
 	"encoding/hex"
+	rtcmlib "github.com/serg-2/rtcm_lib"
 	"github.com/tarm/serial"
 	"log"
 	"os"
@@ -159,9 +161,12 @@ func GetSkyTraqMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 	}
 	//fmt.Println("Packet Border found")
 
+	// Cut last 4 bytes
 	fullMessage = fullMessage[:len(fullMessage)-4]
+	// Append header
 	fullMessage = append(begin4, fullMessage...)
 	fullMessage = append(begin3, fullMessage...)
+	// Append Ender
 	fullMessage = append(fullMessage, begin1[0])
 	fullMessage = append(fullMessage, begin2[0])
 
@@ -220,3 +225,64 @@ func GetPortReader(nameOfPort string, baudRate int) *bufio.Reader {
 
 	return bufio.NewReader(serialPort)
 }
+
+func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
+
+	var partMessage byte
+
+	var checkMessage, fullMessage []byte
+
+	headerLength := make([]byte, 2)
+
+	//begin1, _ := hex.DecodeString("0D")
+	//begin2, _ := hex.DecodeString("0A")
+
+	//begin3, _ := hex.DecodeString("A0")
+	//begin4, _ := hex.DecodeString("A1")
+
+	//frameString,_ := hex.DecodeString("0D0AA0A1")
+
+	// wait for start
+
+	// Accumulating 3 bytes to check
+	for len(checkMessage) < 3 {
+		partMessage, _ = reader.ReadByte()
+		checkMessage = append(checkMessage, partMessage)
+		fullMessage = append(fullMessage, partMessage)
+	}
+
+	length:=binary.BigEndian.Uint16(checkMessage[1:])
+
+	// Looking for separator between packets
+	for !((checkMessage[0] == byte(0xD3)) && (checkMessage[1] >> 2 == byte(0)) && (length < 1023) ) {
+		if debug{
+			log.Printf("%v\n", checkMessage)
+		}
+
+		checkMessage = checkMessage[1:]
+		partMessage, _ = reader.ReadByte()
+		checkMessage = append(checkMessage, partMessage)
+		fullMessage = append(fullMessage, partMessage)
+		length=binary.BigEndian.Uint16(checkMessage[1:])
+
+	}
+	//fmt.Println("Packet Border found")
+
+	// Cut last 3 bytes (New header)
+	fullMessage = fullMessage[:len(fullMessage)-3]
+	// Append header
+	binary.BigEndian.PutUint16(headerLength[0:], uint16(len(fullMessage)-3))
+
+	fullMessage = append(headerLength, fullMessage...)
+	fullMessage = append([]byte{byte(0xD3)}, fullMessage...)
+
+	crcReceived := fullMessage[len(fullMessage)-3:]
+	crcCalculated := rtcmlib.Crc24q_hash(fullMessage[:len(fullMessage)-3])
+
+	if crcReceived != crcCalculated {
+		log.Println("BAD CRC!!!!!")
+	}
+
+	return fullMessage, true
+}
+
