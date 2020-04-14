@@ -2,13 +2,14 @@ package seriallib
 
 import (
 	"bufio"
+	"encoding/hex"
 	"github.com/tarm/serial"
 	"log"
+	"os"
 	"strconv"
 	"strings"
-	"time"
-	"os"
 	"syscall"
+	"time"
 )
 
 func parseString(f string) float64 {
@@ -21,7 +22,7 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 	var message_length byte
 	var positions [2]byte
 	var reply []byte
-	var err_reader error
+	var err_reader,err error
 	check_valid := map[string]bool{
 		"A": true,
 		"1": true,
@@ -46,41 +47,12 @@ func GetPosition(message_type string, port string, baudrate int, stop_after_fail
 		log.Printf("Message type not supported\n")
 		return [2]float64{300, 300}, false
 	}
-	c := &serial.Config{Name: port, Baud: baudrate}
 
-	s, err := serial.OpenPort(c)
-	// Handle errors
-	for err != nil {
-		// Check file exists and have access
-		_,check1 := err.(*os.PathError)
-		if check1 {
-			log.Printf("Can't open serial port from config.\nWaiting 10 secs...\n")
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		// Check propriate serial device
-		_,check2 := err.(syscall.Errno)
-		if check2 {
-			log.Printf("Serial port from configuration is not serial port\nWaiting 10 secs...\n")
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		log.Printf("Unable to handle error.\n")
-		log.Fatal(err)
-	}
-        // Now it's opening all the time.
-        // log.Printf("Serial port opened.\n")
-
-	//      n, err := s.Write([]byte("test"))
-	//      if err != nil {
-	//              log.Fatal(err)
-	//      }
-
-	reader := bufio.NewReader(s)
+	reader := GetPortReader(port, baudrate)
 
 	//FIRST READ TO SKIP HALF MESSAGES
 	reply, err_reader = reader.ReadBytes('\n')
-	if err != nil {
+	if err_reader != nil {
 		reply, err_reader = reader.ReadBytes('\n')
 		if err_reader != nil {
 			panic(err_reader)
@@ -150,4 +122,101 @@ func convertCoordinate(x string) float64 {
 
 	answer := x_final
 	return answer
+}
+
+func GetSkyTraqMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
+
+	var partMessage byte
+
+	var checkMessage, fullMessage []byte
+
+	begin1, _ := hex.DecodeString("0D")
+	begin2, _ := hex.DecodeString("0A")
+
+	begin3, _ := hex.DecodeString("A0")
+	begin4, _ := hex.DecodeString("A1")
+
+	frameString,_ := hex.DecodeString("0D0AA0A1")
+
+	// wait for start
+
+	// Accumulating 4 bytes to check
+	for len(checkMessage) < 4 {
+		partMessage, _ = reader.ReadByte()
+		checkMessage = append(checkMessage, partMessage)
+		fullMessage = append(fullMessage, partMessage)
+	}
+
+	// Looking for separator between packets
+	for !(checkMessage[0] == frameString[0] && checkMessage[1] == frameString[1] && checkMessage[2] == frameString[2] && checkMessage[3] == frameString[3]) {
+		if debug{
+			log.Printf("%v\n", checkMessage)
+		}
+		checkMessage = checkMessage[1:]
+		partMessage, _ = reader.ReadByte()
+		checkMessage = append(checkMessage, partMessage)
+		fullMessage = append(fullMessage, partMessage)
+	}
+	//fmt.Println("Packet Border found")
+
+	fullMessage = fullMessage[:len(fullMessage)-4]
+	fullMessage = append(begin4, fullMessage...)
+	fullMessage = append(begin3, fullMessage...)
+	fullMessage = append(fullMessage, begin1[0])
+	fullMessage = append(fullMessage, begin2[0])
+
+	// Check CRC
+	payload := fullMessage[4:len(fullMessage)-3]
+	crc:= calculateCRCSkytraq(payload)
+	if crc != fullMessage[len(fullMessage)-3] {
+		log.Println("CRC NOT OK!!!")
+		return fullMessage, false
+	}
+
+	return fullMessage, true
+}
+
+func calculateCRCSkytraq(payload []byte) byte {
+	var crc byte
+	crc = 0
+	for i := 0; i < len(payload); i++ {
+		crc ^= payload[i]
+	}
+	//fmt.Printf("Received Payload: %v\n", payload)
+
+	return crc
+}
+
+func GetPortReader(nameOfPort string, baudRate int) *bufio.Reader {
+	serialPort, err := serial.OpenPort(&serial.Config{Name: nameOfPort, Baud: baudRate})
+
+	// Handle errors
+	for err != nil {
+		// Check file exists and have access
+		_,check1 := err.(*os.PathError)
+		if check1 {
+			log.Printf("Can't open serial port from config.\nWaiting 10 secs...\n")
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		// Check propriate serial device
+		_,check2 := err.(syscall.Errno)
+		if check2 {
+			log.Printf("Serial port from configuration is not serial port\nWaiting 10 secs...\n")
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		log.Printf("Unable to handle error.\n")
+		log.Fatal(err)
+	}
+
+	// log.Printf("Serial port opened.\n")
+
+	// To Write something
+	//      n, err := serialPort.Write([]byte("test"))
+	//      if err != nil {
+	//              log.Fatal(err)
+	//      }
+
+	return bufio.NewReader(serialPort)
 }
