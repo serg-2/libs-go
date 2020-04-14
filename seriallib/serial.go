@@ -226,13 +226,13 @@ func GetPortReader(nameOfPort string, baudRate int) *bufio.Reader {
 	return bufio.NewReader(serialPort)
 }
 
-func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
+func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte,bool) {
 
 	var partMessage byte
 
 	var checkMessage, fullMessage []byte
 
-	headerLength := make([]byte, 2)
+	//headerLength := make([]byte, 2)
 
 	// Accumulating 3 bytes to check
 	for len(checkMessage) < 3 {
@@ -241,10 +241,21 @@ func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 		fullMessage = append(fullMessage, partMessage)
 	}
 
-	length:=binary.BigEndian.Uint16(checkMessage[1:])
+	// Looking for apropriate start
+	for !((checkMessage[0] == byte(0xD3)) && (checkMessage[1] >> 2 == byte(0)) && (binary.BigEndian.Uint16(checkMessage[1:]) < 1023) ) {
+		partMessage, _ = reader.ReadByte()
+		checkMessage = checkMessage[1:]
+		fullMessage = fullMessage[1:]
+		checkMessage = append(checkMessage, partMessage)
+		fullMessage = append(fullMessage, partMessage)
+		//log.Println("EXECUTING WAIT")
+	}
+	collectedLength := binary.BigEndian.Uint16(checkMessage[1:])
+	//xlog.Println(collectedLength)
 
 	// Looking for separator between packets
-	for !((checkMessage[0] == byte(0xD3)) && (checkMessage[1] >> 2 == byte(0)) && (length < 1023) ) {
+	//for !((checkMessage[0] == byte(0xD3)) && (checkMessage[1] >> 2 == byte(0)) && (binary.BigEndian.Uint16(checkMessage[1:]) < 1023) ) {
+	for i:=0; i < int(collectedLength) + 3;i++ {
 		if debug{
 			log.Printf("%v\n", checkMessage)
 		}
@@ -253,24 +264,26 @@ func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 		partMessage, _ = reader.ReadByte()
 		checkMessage = append(checkMessage, partMessage)
 		fullMessage = append(fullMessage, partMessage)
-		length=binary.BigEndian.Uint16(checkMessage[1:])
 
 	}
 	//log.Println("Packet Border found")
 
 	// Cut last 3 bytes (New header)
-	fullMessage = fullMessage[:len(fullMessage)-3]
-	// Append header
-	binary.BigEndian.PutUint16(headerLength[0:], uint16(len(fullMessage)-3))
+	//fullMessage = fullMessage[:len(fullMessage)-3]
 
-	fullMessage = append(headerLength, fullMessage...)
-	fullMessage = append([]byte{byte(0xD3)}, fullMessage...)
+	// Append header
+	//binary.BigEndian.PutUint16(headerLength[0:], uint16(len(fullMessage)-3))
+	//fullMessage = append(headerLength, fullMessage...)
+	//fullMessage = append([]byte{byte(0xD3)}, fullMessage...)
 
 	crcReceived := binary.BigEndian.Uint32(append([]byte{byte(0x00)},fullMessage[len(fullMessage)-3:]...))
 	crcCalculated := rtcmlib.Crc24q_hash(fullMessage[:len(fullMessage)-3])
 
 	if crcReceived != uint32(crcCalculated) {
 		log.Println("BAD CRC!!!!!")
+		log.Println("Message:")
+		log.Printf("%v\n", fullMessage)
+		return fullMessage, false
 	}
 
 	return fullMessage, true
