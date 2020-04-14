@@ -234,16 +234,6 @@ func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 
 	headerLength := make([]byte, 2)
 
-	//begin1, _ := hex.DecodeString("0D")
-	//begin2, _ := hex.DecodeString("0A")
-
-	//begin3, _ := hex.DecodeString("A0")
-	//begin4, _ := hex.DecodeString("A1")
-
-	//frameString,_ := hex.DecodeString("0D0AA0A1")
-
-	// wait for start
-
 	// Accumulating 3 bytes to check
 	for len(checkMessage) < 3 {
 		partMessage, _ = reader.ReadByte()
@@ -266,7 +256,7 @@ func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 		length=binary.BigEndian.Uint16(checkMessage[1:])
 
 	}
-	//fmt.Println("Packet Border found")
+	//log.Println("Packet Border found")
 
 	// Cut last 3 bytes (New header)
 	fullMessage = fullMessage[:len(fullMessage)-3]
@@ -276,10 +266,10 @@ func GetRTCMMessage(reader *bufio.Reader, debug bool) ([]byte, bool) {
 	fullMessage = append(headerLength, fullMessage...)
 	fullMessage = append([]byte{byte(0xD3)}, fullMessage...)
 
-	crcReceived := fullMessage[len(fullMessage)-3:]
+	crcReceived := binary.BigEndian.Uint32(append([]byte{byte(0x00)},fullMessage[len(fullMessage)-3:]...))
 	crcCalculated := rtcmlib.Crc24q_hash(fullMessage[:len(fullMessage)-3])
 
-	if crcReceived != crcCalculated {
+	if crcReceived != uint32(crcCalculated) {
 		log.Println("BAD CRC!!!!!")
 	}
 
