@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"encoding/hex"
-	rtcmlib "github.com/serg-2/rtcm_lib"
+	rtcmlib "github.com/serg-2/rtcm_lib/lib"
 	"github.com/tarm/serial"
 	"log"
 	"os"
