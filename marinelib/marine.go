@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const R = 6373000
@@ -205,4 +206,62 @@ func GenerateNMEA(tmp_string string) string {
 	nmeaMessage = nmeaMessage + "*" + calculateChecksum(nmeaMessage[1:])
 
 	return nmeaMessage
+}
+
+func GenerateNMEAGGA(lat, long, alt float64) string {
+	var lat_s, lon_s, sign_lat, sign_lon string
+
+	time := fmt.Sprintf(time.Now().UTC().Format("150405.00"))
+	heightOfGeoid := 13.2
+
+	lat_min := (lat - float64(int64(lat))) * 60
+	lat_d := float64(int64(lat)) * 100 + lat_min
+
+	lon_min := (long - float64(int64(long))) * 60
+	lon_d := float64(int64(long)) * 100 + lon_min
+
+	if lat_d < 0 {
+		lat_s = fmt.Sprintf("%9.4f", -lat_d)
+		sign_lat = "S"
+	} else {
+		lat_s = fmt.Sprintf("%9.4f", lat_d)
+		sign_lat = "N"
+	}
+
+	if lon_d < 0 {
+		lon_s = fmt.Sprintf("%010.4f", -lon_d)
+		sign_lon = "W"
+	} else {
+		lon_s = fmt.Sprintf("%010.4f", lon_d)
+		sign_lon = "E"
+	}
+
+	alt_s := fmt.Sprintf("%.2f", alt)
+	geoid_s := fmt.Sprintf("%.2f", heightOfGeoid)
+
+	//Creating AIS MESSAGE
+	// 4 - RTK Quality
+	// 20 - satellites
+	// 1 - Horizontal dilution of position
+	//     (empty field) time in seconds since last DGPS update
+	//     (empty field) DGPS station ID number
+	nmeaMessage := "$GPGGA," + time + "," + lat_s + "," + sign_lat + "," + lon_s + "," + sign_lon + ",4,20,1," + alt_s + ",M," + geoid_s + ",M,,"
+	nmeaMessage = nmeaMessage + "*" + calculateChecksum(nmeaMessage[1:])
+
+	return nmeaMessage
+}
+
+func ConvertXYZtoLatLongAlt(x,y,z float64, ref_lat,ref_lon,ref_z float64, ugol float64) (float64,float64,float64) {
+	// XY - Right side
+	// ugol - Counter clockwise
+
+	T := ugol * math.Pi / 180
+
+	meridian := 111134.861111
+	parallel := (40075696 * math.Cos (ref_lat * math.Pi / 180)) / 360
+
+	new_x := (x * math.Cos(T) - y*math.Sin(T)) / parallel + ref_lon
+	new_y := (x * math.Sin(T) + y*math.Cos(T)) / meridian + ref_lat
+	new_z := z + ref_z
+	return new_y,new_x,new_z
 }
