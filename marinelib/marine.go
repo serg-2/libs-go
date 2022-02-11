@@ -44,13 +44,15 @@ func EncodeType1(mmsi uint32, speed float64, longtitude float64, latitude float6
 	//MMSI
 	_mmsi := fmt.Sprintf("%030b", mmsi)
 	//Status not defined (15)
-	_status := fmt.Sprintf("%04b", int(15))
+	// Status 8 = under way sailing
+	_status := fmt.Sprintf("%04b", int(8))
 	//rate of turn not defined (128)
 	_rot := fmt.Sprintf("%08b", int(128))
 	// Speed over ground is in 0.1-knot resolution from 0 to 102 knots. value 1023 indicates speed is not available, value 1022 indicates 102.2 knots or higher.
 	_speed := fmt.Sprintf("%010b", int(speed*10))
-	// > 10m
-	_accurancy := "0"
+	// 0 - > 10m
+	// 1 - < 10m
+	_accuracy := "1"
 
 	//NB. We add a mask to tell program how long is our representation (overwise on negative integers, it cannot do the complement 2).
 	_long := fmt.Sprintf("%028b", int(longtitude*600000)&0xFFFFFFF)
@@ -65,12 +67,13 @@ func EncodeType1(mmsi uint32, speed float64, longtitude float64, latitude float6
 	_ts := fmt.Sprintf("%06b", int(ts))
 	// "00": manufactor NaN
 	// "000":  spare
-	// "0": Raim flag
-	_flags := "000000"
+	// "1": Raim flag
+	_flags := "000001"
 	// '11100000000000000110' : Radio status ??
-	_rstatus := "0000000000000000000"
+	// _rstatus := "0000000000000000000" Radio status
+	_rstatus := fmt.Sprintf("%019b", 49168)
 
-	message := _type + _repeat + _mmsi + _status + _rot + _speed + _accurancy + _long + _lat + _course + _trueHeading + _ts + _flags + _rstatus
+	message := _type + _repeat + _mmsi + _status + _rot + _speed + _accuracy + _long + _lat + _course + _trueHeading + _ts + _flags + _rstatus
 	return message
 }
 
