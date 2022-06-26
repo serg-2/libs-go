@@ -80,7 +80,7 @@ func generateRSAKeyAndCertificate() (string, string, error) {
 	return string(keyToKeyPEM(key, "")), certPem, nil
 }
 
-func GenerateCertificateRequest(commonName string, clientPassword string) ([]byte, []byte) {
+func generateCertificateRequest(commonName string, clientPassword string) ([]byte, []byte) {
 	keyBytes, _ := rsa.GenerateKey(rand.Reader, 4096)
 
 	encryptedKeyBytes := keyToKeyPEM(keyBytes, clientPassword)
@@ -230,7 +230,7 @@ func combineFolder(folderNames ...string) string {
 	return a
 }
 
-func generateCert(commonName string, clientPassword string, caPassword string, config Openssl) {
+func GenerateCert(commonName string, clientPassword string, caPassword string, config Openssl) {
 	configFileName := commonName + ".ovpn"
 	userKeyFileName := commonName + ".key"
 	requestFileName := commonName + ".csr"
