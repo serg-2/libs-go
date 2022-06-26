@@ -80,7 +80,7 @@ func generateRSAKeyAndCertificate() (string, string, error) {
 	return string(keyToKeyPEM(key, "")), certPem, nil
 }
 
-func generateCertificateRequest(commonName string, clientPassword string) ([]byte, []byte) {
+func GenerateCertificateRequest(commonName string, clientPassword string) ([]byte, []byte) {
 	keyBytes, _ := rsa.GenerateKey(rand.Reader, 4096)
 
 	encryptedKeyBytes := keyToKeyPEM(keyBytes, clientPassword)
