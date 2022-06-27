@@ -6,7 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/serg-2/certinfo"
 	"io/ioutil"
@@ -332,4 +334,32 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	targetFile.WriteString("<tls-auth>\n")
 	targetFile.Write(tlsBytes)
 	targetFile.WriteString("</tls-auth>\n")
+}
+
+func XorArrays(a []byte, b []byte) ([]byte, error) {
+	if len(a) == 0 || len(b) == 0 {
+		return []byte{}, errors.New("Empty array.")
+	}
+
+	if len(a) != len(b) {
+		return []byte{}, errors.New("Arrays not equal.")
+	}
+
+	for i := range a {
+		a[i] ^= b[i]
+	}
+
+	return a, nil
+}
+
+func ArrayFromHex(a string) ([]byte, error) {
+	data, err := hex.DecodeString(a)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
+}
+
+func ArrayToHex(a []byte) string {
+	return fmt.Sprintf("%x", a)
 }
