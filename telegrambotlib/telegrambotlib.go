@@ -220,3 +220,37 @@ func SendBytesFile(chatId int64, buf bytes.Buffer, filename string, bot *tgbotap
 	docUpload := tgbotapi.NewDocument(chatId, fileInterface)
 	bot.Send(docUpload)
 }
+
+// BotInitialize - initialize new bot
+func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
+
+	bot, err := tgbotapi.NewBotAPI(config.Token)
+	cl.ChkFatal(err)
+
+	//bot.Debug = true
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	// Old style init webHook
+	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
+	// New Style init webHook
+	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+	_, err = bot.Request(webHook)
+	if err != nil {
+		switch err.(type) {
+		case *tgbotapi.Error:
+			// Try one more time
+			log.Printf("Internal server error, trying one more time...\n")
+			_, err = bot.Request(webHook)
+		default:
+			cl.ChkFatal(err)
+		}
+	}
+
+	cl.ChkFatal(err)
+
+	updates := bot.ListenForWebhook("/" + bot.Token)
+	go http.ListenAndServeTLS(config.ListenHost+":"+fmt.Sprintf("%d", config.Port), config.Certificate, config.Key, nil)
+
+	return bot, updates
+}
