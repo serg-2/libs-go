@@ -6,7 +6,9 @@ import (
 	"github.com/lib/pq"
 	"log"
 	"net"
+	"regexp"
 	"strconv"
+	"strings"
 )
 
 // ChkFatal - check and exit upon Fatal
@@ -77,4 +79,56 @@ func CheckStringInSlice(a string, list []string) bool {
 		}
 	}
 	return false
+}
+
+func GetIntString(s string, lengthString int, negativePossible bool, maxValue int) (int, bool) {
+	if len(s) > lengthString {
+		return 0, false
+	}
+	result, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, false
+	}
+	if !negativePossible {
+		if result < 0 {
+			return 0, false
+		}
+	}
+	if result > maxValue {
+		return 0, false
+	}
+
+	return result, true
+}
+
+// GetStringWithCheck - check string for length, regex(optional, "" - no regex), with change register(optional)
+func GetStringWithCheck(s string, lengthString int, regexPatternForString string, toLower bool, toUpper bool) (string, bool) {
+	// Check appropriate run parameters
+	if toUpper && toLower {
+		return "", false
+	}
+	// Check length
+	if len(s) > lengthString {
+		return "", false
+	}
+	if regexPatternForString != "" {
+		matched, err := regexp.MatchString(regexPatternForString, s)
+		// BAD REGEXP
+		if err != nil {
+			return "", false
+		}
+		// Not Matched
+		if !matched {
+			return "", false
+		}
+	}
+
+	if toLower {
+		return strings.ToLower(s), true
+	}
+	if toUpper {
+		return strings.ToUpper(s), true
+	}
+
+	return s, true
 }
