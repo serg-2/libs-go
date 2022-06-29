@@ -148,13 +148,6 @@ func ExecuteOs(s string, timeout int) (string, string, int, bool) {
 	var exitCode int
 
 	var cmd *exec.Cmd
-	commSplit := strings.Split(s, " ")
-	// Append -c to beginning
-	commSplit = append(commSplit, "-c")
-	copy(commSplit[1:], commSplit)
-	commSplit[0] = "-c"
-
-	//cmd = exec.Command("bash", commSplit[:]...)
 	cmd = exec.Command("sh", "-c", s)
 
 	cmd.Stdout = &stdOut
