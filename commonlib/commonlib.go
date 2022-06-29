@@ -138,7 +138,7 @@ func GetStringWithCheck(s string, lengthString int, regexPatternForString string
 }
 
 // ExecuteOs - execute command OS. Timeout in milliseconds
-func ExecuteOs(s string, timeout int) (string, string, int, bool) {
+func ExecuteOs(s string, envDir string, timeout int) (string, string, int, bool) {
 	var stdOutString = ""
 	var stdErrString = ""
 
@@ -149,6 +149,9 @@ func ExecuteOs(s string, timeout int) (string, string, int, bool) {
 
 	var cmd *exec.Cmd
 	cmd = exec.Command("sh", "-c", s)
+	if envDir != "" {
+		cmd.Dir = envDir
+	}
 
 	cmd.Stdout = &stdOut
 	cmd.Stderr = &stdErr
