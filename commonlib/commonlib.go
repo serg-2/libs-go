@@ -144,6 +144,7 @@ func ExecuteOs(s string, timeout int) (string, string, int, bool) {
 
 	var stdOut bytes.Buffer
 	var stdErr bytes.Buffer
+
 	var exitCode int
 
 	var cmd *exec.Cmd
