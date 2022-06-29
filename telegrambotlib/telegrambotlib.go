@@ -209,11 +209,12 @@ func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgb
 	bot.Send(photoUpload)
 }
 
-func SendBytesFile(chatId int64, buf bytes.Buffer, filename string, bot *tgbotapi.BotAPI) {
+// SendByteArrayFile - Send Byte array to file
+func SendByteArrayFile(chatId int64, byteArray []byte, filename string, bot *tgbotapi.BotAPI) {
 	// Creating filename and payload
 	fileInterface := tgbotapi.FileBytes{
 		Name:  filename,
-		Bytes: buf.Bytes(),
+		Bytes: byteArray,
 	}
 
 	// Sending answer
