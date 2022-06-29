@@ -1,14 +1,18 @@
 package commonlib
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"github.com/lib/pq"
 	"log"
 	"net"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // ChkFatal - check and exit upon Fatal
@@ -131,4 +135,78 @@ func GetStringWithCheck(s string, lengthString int, regexPatternForString string
 	}
 
 	return s, true
+}
+
+// ExecuteOs - execute command OS. Timeout in milliseconds
+func ExecuteOs(s string, timeout int) (string, string, int, bool) {
+	var stdOutString = ""
+	var stdErrString = ""
+
+	var stdOut bytes.Buffer
+	var stdErr bytes.Buffer
+	var exitCode int
+
+	var cmd *exec.Cmd
+	commSplit := strings.Split(s, " ")
+	// Append -c to beginning
+	commSplit = append(commSplit, "-c")
+	copy(commSplit[1:], commSplit)
+	commSplit[0] = "-c"
+
+	//cmd = exec.Command("bash", commSplit[:]...)
+	cmd = exec.Command("sh", "-c", s)
+
+	cmd.Stdout = &stdOut
+	cmd.Stderr = &stdErr
+
+	ch := make(chan error)
+
+	timer := time.NewTimer(time.Millisecond * time.Duration(timeout))
+
+	// Run Command
+	go func() {
+		ch <- cmd.Run()
+	}()
+
+	// Wait for event
+	select {
+	// Command executed
+	case err := <-ch:
+		if err != nil {
+			// Check exit code != 0
+			exiterr, ok := err.(*exec.ExitError)
+			if ok {
+				status, ok2 := exiterr.Sys().(syscall.WaitStatus)
+				if ok2 {
+					// log.Printf("Exit Status: %d", status.ExitStatus())
+					exitCode = status.ExitStatus()
+				} else {
+					// Strange error
+					log.Printf("Unknown Exit status: %v\n", err)
+					return "", "", -1, false
+				}
+			}
+		} else {
+			exitCode = 0
+		}
+
+		if stdOut.Len() > 0 {
+			stdOutString = strings.TrimSuffix(stdOut.String(), "\n")
+		}
+		if stdErr.Len() > 0 {
+			stdErrString = strings.TrimSuffix(stdErr.String(), "\n")
+		}
+		// SUCCESS! (Exit code could be non 0!) ----------------------------
+		return stdOutString, stdErrString, exitCode, true
+	// Timer expired. Aborting command
+	case <-timer.C:
+		err := cmd.Process.Kill()
+		if err != nil {
+			log.Printf("Failed to kill process: %v\n", err)
+			return "", "", -2, false
+		}
+	}
+	// Timer expired
+	log.Printf("Timer Expired\n")
+	return "", "", -3, false
 }
