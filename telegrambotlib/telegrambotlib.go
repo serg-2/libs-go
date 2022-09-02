@@ -75,11 +75,13 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 
 	// Check command exists
 	if !found {
+		log.Printf("Command not found ***%s***\n", command)
 		return "", nil
 	}
 
 	// Check number of arguments is ok
 	if len(arguments) < argsRange.Min || len(arguments) > argsRange.Max {
+		log.Printf("Number of arguments(%d) for command ***%s*** is not ok.\n", len(arguments), command)
 		return "", nil
 	}
 	return command, arguments
