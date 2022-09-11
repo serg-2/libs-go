@@ -69,13 +69,18 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 
 	// Convert alias to command
 	command = getCommandFromAliases(command, commandsP)
+	// Check command exists
+	if command == "" {
+		log.Printf("Command not found ***%s***\n", command)
+		return "", nil
+	}
 
 	// find arguments and existence in map
 	argsRange, found := getCommandRange(command, commandsP)
 
 	// Check command exists
 	if !found {
-		log.Printf("Command not found ***%s***\n", command)
+		log.Printf("Command range not found ***%s***\n", command)
 		return "", nil
 	}
 
