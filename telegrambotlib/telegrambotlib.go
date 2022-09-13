@@ -202,6 +202,7 @@ func WriteLog(message tgbotapi.Update) {
 	cl.ChkFatal(err)
 }
 
+// SendPictureFile - send picture
 func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgbotapi.BotAPI) {
 	photoBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -214,6 +215,21 @@ func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgb
 
 	photoUpload := tgbotapi.NewPhoto(chatId, photoFileBytes)
 	bot.Send(photoUpload)
+}
+
+// SendVideoFile - Send video
+func SendVideoFile(chatId int64, filename string, videoName string, bot *tgbotapi.BotAPI) {
+	videoBytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		cl.ChkNonFatal(err)
+	}
+	videoFileBytes := tgbotapi.FileBytes{
+		Name:  videoName,
+		Bytes: videoBytes,
+	}
+
+	videoUpload := tgbotapi.NewVideo(chatId, videoFileBytes)
+	bot.Send(videoUpload)
 }
 
 // SendByteArrayFile - Send Byte array to file
