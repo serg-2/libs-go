@@ -140,6 +140,13 @@ func SendLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI) {
 	bot.Send(msg)
 }
 
+func SendLowLevelDelayed(targetChatId int64, message string, bot *tgbotapi.BotAPI, delay time.Duration) {
+	go func() {
+		time.Sleep(delay)
+		SendLowLevel(targetChatId, message, bot)
+	}()
+}
+
 func SendToGroup(message string, userList []int64, bot *tgbotapi.BotAPI) {
 	for _, user := range userList {
 		SendLowLevel(user, message, bot)
