@@ -15,8 +15,13 @@ import (
 	"time"
 	"unicode/utf8"
 
+	tag "github.com/dhowden/tag"
 	cl "github.com/serg-2/libs-go/commonlib"
+	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/transform"
 )
+
+const MAXIMUM_TRACK_IN_PLAYLIST_SIZE = 7
 
 // LoadCommands - Load commands from JSON file
 func LoadCommands(file string) []CommandStruct {
@@ -218,18 +223,122 @@ func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgb
 }
 
 // SendVideoFile - Send video
-func SendVideoFile(chatId int64, filename string, videoName string, bot *tgbotapi.BotAPI) {
+func SendVideoFile(chatId int64, filename string, videoCaption string, bot *tgbotapi.BotAPI) {
 	videoBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		cl.ChkNonFatal(err)
 	}
 	videoFileBytes := tgbotapi.FileBytes{
-		Name:  videoName,
+		Name:  videoCaption,
 		Bytes: videoBytes,
 	}
 
 	videoUpload := tgbotapi.NewVideo(chatId, videoFileBytes)
 	bot.Send(videoUpload)
+}
+
+func readBytes(filename string) tgbotapi.FileBytes {
+	fileBytes, err := ioutil.ReadFile(filename)
+	cl.ChkNonFatal(err)
+
+	tgFileBytes := tgbotapi.FileBytes{
+		Name:  "",
+		Bytes: fileBytes,
+	}
+	return tgFileBytes
+}
+
+// Read MP3 tag by filename
+func readTag(filename string) (string, string) {
+	f, err := os.Open(filename)
+	cl.ChkNonFatal(err)
+	defer f.Close()
+
+	m, err := tag.ReadFrom(f)
+	cl.ChkNonFatal(err)
+
+	// fmt.Println("Format", m.Format())
+	//fmt.Printf("RAW: %v\n", m.Raw()["TPE1"])
+
+	// DETECT ENCODING
+	// import "github.com/mikkyang/id3-go"
+	// mp3File, _ := id3.Open(filename)
+	// defer mp3File.Close()
+	// fmt.Println("Encoding:", mp3File.Frame("TPE1").(*v2.TextFrame).Encoding())
+
+	// Using Artist and Title field
+	if m.Format() == tag.ID3v1 {
+		return cp1251ToUtf8(m.Artist()), cp1251ToUtf8(m.Title())
+	} else if m.Format() == tag.ID3v2_3 {
+		return v23convert(m.Artist()), v23convert(m.Title())
+	} else {
+		return m.Artist(), m.Title()
+	}
+}
+
+// MP3 id3v2_3 convert
+func v23convert(stringFrom string) string {
+	// Transform from LATIN1. Because library TAG already decoded frame as LATIN1, what was wrong
+	latin1, _, err := transform.String(charmap.ISO8859_1.NewEncoder(), stringFrom)
+	// Check error of encode
+	if err != nil {
+		latin1 = stringFrom
+	}
+
+	// Decode from windows1251
+	decoder := charmap.Windows1251.NewDecoder()
+	res, _ := decoder.String(latin1)
+
+	// If error res will be ""
+	if len(res) == 0 {
+		return latin1
+	}
+	return res
+}
+
+// Converting charset cp1251 to UTF8
+func cp1251ToUtf8(stringFrom string) string {
+	// MAIN
+	decoder := charmap.Windows1251.NewDecoder()
+	res, _ := decoder.String(stringFrom)
+	return res
+}
+
+// SendMediaFiles - Send media files in group
+func SendMediaFiles(bot *tgbotapi.BotAPI, chatId int64, mediaType string, filenames []string) {
+	var result []interface{}
+
+	if mediaType == "audio" {
+		// Send by MAXIMUM_TRACK_IN_PLAYLIST_SIZE
+		for len(filenames) > MAXIMUM_TRACK_IN_PLAYLIST_SIZE {
+			tmp_filenames := filenames[:MAXIMUM_TRACK_IN_PLAYLIST_SIZE]
+			filenames = filenames[MAXIMUM_TRACK_IN_PLAYLIST_SIZE:]
+			for _, filename := range tmp_filenames {
+				bytes := readBytes(filename)
+				audio := tgbotapi.NewInputMediaAudio(bytes)
+
+				// Change default performer and title(as needed cp1251 -> UTF8)
+				audio.Performer, audio.Title = readTag(filename)
+
+				result = append(result, audio)
+			}
+			mediaGroup := tgbotapi.NewMediaGroup(chatId, result)
+			bot.Send(mediaGroup)
+			result = nil
+		}
+		// Send rest
+		for _, filename := range filenames {
+			bytes := readBytes(filename)
+			audio := tgbotapi.NewInputMediaAudio(bytes)
+
+			// Change default performer and title(as needed cp1251 -> UTF8)
+			audio.Performer, audio.Title = readTag(filename)
+
+			result = append(result, audio)
+		}
+		mediaGroup := tgbotapi.NewMediaGroup(chatId, result)
+		bot.Send(mediaGroup)
+	}
 }
 
 // SendByteArrayFile - Send Byte array to file
