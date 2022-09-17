@@ -122,6 +122,22 @@ func getCommandFromAliases(s string, commandsP *[]CommandStruct) string {
 	return ""
 }
 
+func GetCommandHelpFromAliases(s string, commandsP *[]CommandStruct) string {
+	for _, command := range *commandsP {
+		// Check Main command
+		if command.Name == s {
+			return command.Help
+		}
+		// Check Aliases
+		for _, alias := range command.Aliases {
+			if alias == s {
+				return command.Help
+			}
+		}
+	}
+	return ""
+}
+
 func SendLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI) {
 	//	log.Printf("Full Message Size: %d\n", len(message))
 	for len(message) > MAX_MESSAGE_SIZE {
