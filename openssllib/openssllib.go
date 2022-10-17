@@ -154,6 +154,7 @@ func crsToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	}
 	der, err := x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
 	if err != nil {
+        fmt.Println("Error of DecryptPemBlock: ", err)
 		panic("Decode CA Private key PASSWORD failed")
 	}
 	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)
