@@ -1,7 +1,7 @@
 package telegrambotlib
 
-// MAX_INPUT_MESSAGE_SIZE_FOR_COMMAND - max allowed user input with command
-const MAX_INPUT_MESSAGE_SIZE_FOR_COMMAND int = 200
+// MAX_INPUT_MESSAGE_SIZE_FOR_COMMAND - max allowed user input with command (In bytes)
+const MAX_INPUT_MESSAGE_SIZE_FOR_COMMAND int = 400
 
 // MAX_MESSAGE_SIZE - MAX MESSAGE SIZE of telegram
 const MAX_MESSAGE_SIZE int = 4000
