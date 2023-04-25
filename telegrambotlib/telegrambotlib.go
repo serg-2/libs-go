@@ -52,7 +52,7 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 	}
 
 	// too many spaces
-	if len(strings.Split(message, " ")) > 12 {
+	if len(strings.Split(message, " ")) > 20 {
 		return "", nil
 	}
 
