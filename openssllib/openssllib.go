@@ -236,6 +236,7 @@ func combineFolder(folderNames ...string) string {
 
 func GenerateCert(commonName string, clientPassword string, caPassword string, config Openssl) {
 	configFileName := commonName + ".ovpn"
+	configFileNameAlternative := commonName + "_rus" + ".ovpn"
 	userKeyFileName := commonName + ".key"
 	requestFileName := commonName + ".csr"
 	certFileName := commonName + ".crt"
@@ -309,7 +310,7 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 
 	// Should rework for multiple templates
 	if config.TemplateFilename2 != "" {
-		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileName), certStruct)
+		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileNameAlternative), certStruct)
 	}
 
 }
