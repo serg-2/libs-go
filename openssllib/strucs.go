@@ -24,6 +24,7 @@ type Openssl struct {
 	CaKeyFileName           string `json:"CaKeyFileName"`
 	TaFileName              string `json:"TaFileName"`
 	TemplateFilename        string `json:"TemplateFilename"`
+	TemplateFilename2       string `json:"TemplateFilename2"`
 
 	NumberOfYearsValidity int `json:"NumberOfYearsValidity"`
 }

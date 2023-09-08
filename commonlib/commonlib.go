@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"github.com/lib/pq"
 	"log"
 	"net"
 	"os/exec"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // ChkFatal - check and exit upon Fatal

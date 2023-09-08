@@ -306,6 +306,12 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	}
 
 	WriteToFileUsingTemplate(config.TemplateFilename, combineFolder(config.ConfigsFolder, configFileName), certStruct)
+
+	// Should rework for multiple templates
+	if config.TemplateFilename2 != "" {
+		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileName), certStruct)
+	}
+
 }
 
 func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
