@@ -10,13 +10,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/serg-2/certinfo"
 	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/serg-2/certinfo"
 )
 
 func keyToKeyPEM(key *rsa.PrivateKey, pwd string) []byte {
@@ -154,7 +155,7 @@ func crsToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	}
 	der, err := x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
 	if err != nil {
-        fmt.Println("Error of DecryptPemBlock: ", err)
+		fmt.Println("Error of DecryptPemBlock: ", err)
 		panic("Decode CA Private key PASSWORD failed")
 	}
 	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)
@@ -239,6 +240,9 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	requestFileName := commonName + ".csr"
 	certFileName := commonName + ".crt"
 
+	var certStruct CertStruct
+	var err error
+
 	// Generate Key And CertificateRequest
 	keyBytes, requestBytes := generateCertificateRequest(commonName, clientPassword)
 
@@ -248,13 +252,13 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName), requestBytes)
 
 	// Loading ca certificate
-	caCRTBytes, err := ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
+	certStruct.CABytes, err = ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Loading ca key
-	caKEYBytes, err := ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
+	certStruct.KeyBytes, err = ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -274,7 +278,7 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	serial := new(big.Int)
 	serial.SetString(string(serialBytes), 16)
 
-	certificateBytes := crsToCrtExample(caPassword, requestBytes, caCRTBytes, caKEYBytes, config.NumberOfYearsValidity, serial)
+	certStruct.CertBytes = crsToCrtExample(caPassword, requestBytes, certStruct.CABytes, certStruct.KeyBytes, config.NumberOfYearsValidity, serial)
 
 	// Incrementing
 	serial.Add(serial, big.NewInt(1))
@@ -286,14 +290,8 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialFile), []byte(serialNewBytes))
 
 	// Dump user certificate to File, if needed
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertFolder, certFileName), certificateBytes)
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertSerialFolder, certSerialFileName), certificateBytes)
-
-	// load template
-	templateBytes, err := ioutil.ReadFile(config.TemplateFilename)
-	if err != nil {
-		log.Fatal(err)
-	}
+	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertFolder, certFileName), certStruct.CertBytes)
+	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertSerialFolder, certSerialFileName), certStruct.CertBytes)
 
 	// Check Config directory exists
 	err = os.MkdirAll(config.ConfigsFolder, os.ModePerm)
@@ -301,8 +299,24 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 		log.Fatal("Can't create directory: " + config.ConfigsFolder)
 	}
 
+	// Reading TLS static key
+	certStruct.TABytes, err = ioutil.ReadFile(config.TaFileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteToFileUsingTemplate(config.TemplateFilename, combineFolder(config.ConfigsFolder, configFileName), certStruct)
+}
+
+func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
+	// load template
+	templateBytes, err := ioutil.ReadFile(template)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create config file
-	targetFile, err := os.Create(combineFolder(config.ConfigsFolder, configFileName))
+	targetFile, err := os.Create(fullFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -313,27 +327,21 @@ func GenerateCert(commonName string, clientPassword string, caPassword string, c
 
 	// Writing ca certificate
 	targetFile.WriteString("<ca>\n")
-	targetFile.Write(caCRTBytes)
+	targetFile.Write(cert.CABytes)
 	targetFile.WriteString("</ca>\n")
 
 	// Writing certificate
 	targetFile.WriteString("<cert>\n")
-	targetFile.Write(certificateBytes)
+	targetFile.Write(cert.CertBytes)
 	targetFile.WriteString("</cert>\n")
 
 	// Writing key
 	targetFile.WriteString("<key>\n")
-	targetFile.Write(keyBytes)
+	targetFile.Write(cert.KeyBytes)
 	targetFile.WriteString("</key>\n")
 
-	// Writing TLS static key
-	tlsBytes, err := ioutil.ReadFile(config.TaFileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	targetFile.WriteString("<tls-auth>\n")
-	targetFile.Write(tlsBytes)
+	targetFile.Write(cert.TABytes)
 	targetFile.WriteString("</tls-auth>\n")
 }
 

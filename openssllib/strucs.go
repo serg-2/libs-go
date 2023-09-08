@@ -27,3 +27,10 @@ type Openssl struct {
 
 	NumberOfYearsValidity int `json:"NumberOfYearsValidity"`
 }
+
+type CertStruct struct {
+	KeyBytes  []byte
+	CertBytes []byte
+	CABytes   []byte
+	TABytes   []byte
+}
