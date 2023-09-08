@@ -234,9 +234,9 @@ func combineFolder(folderNames ...string) string {
 	return a
 }
 
-func GenerateCert(commonName string, clientPassword string, caPassword string, config Openssl) {
-	configFileName := commonName + ".ovpn"
-	configFileNameAlternative := commonName + "_rus" + ".ovpn"
+func GenerateCert(commonName string, domainName string, clientPassword string, caPassword string, config Openssl) {
+	configFileName := commonName + domainName + ".ovpn"
+	configFileNameAlternative := commonName + "_rus" + domainName + ".ovpn"
 	userKeyFileName := commonName + ".key"
 	requestFileName := commonName + ".csr"
 	certFileName := commonName + ".crt"
