@@ -244,13 +244,14 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	var certStruct CertStruct
 	var err error
 
-	// Generate Key And CertificateRequest
-	keyBytes, requestBytes := generateCertificateRequest(commonName, clientPassword)
+	// Generate Key And CertificateRequest for user
+	var userRequestBytes []byte
+	certStruct.KeyBytes, userRequestBytes = generateCertificateRequest(commonName, clientPassword)
 
 	// Dump KEY File, if needed
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, userKeyFileName), keyBytes)
+	dumpToFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, userKeyFileName), certStruct.KeyBytes)
 	// Dump request to File, if needed
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName), requestBytes)
+	dumpToFile(combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName), userRequestBytes)
 
 	// Loading ca certificate
 	certStruct.CABytes, err = ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
@@ -259,7 +260,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	}
 
 	// Loading ca key
-	certStruct.KeyBytes, err = ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
+	caKeyBytes, err := ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -279,7 +280,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	serial := new(big.Int)
 	serial.SetString(string(serialBytes), 16)
 
-	certStruct.CertBytes = crsToCrtExample(caPassword, requestBytes, certStruct.CABytes, certStruct.KeyBytes, config.NumberOfYearsValidity, serial)
+	certStruct.CertBytes = crsToCrtExample(caPassword, userRequestBytes, certStruct.CABytes, caKeyBytes, config.NumberOfYearsValidity, serial)
 
 	// Incrementing
 	serial.Add(serial, big.NewInt(1))
