@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 
 	tag "github.com/dhowden/tag"
 	cl "github.com/serg-2/libs-go/commonlib"
@@ -94,6 +95,10 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 		log.Printf("Number of arguments(%d) for command ***%s*** is not ok.\n", len(arguments), command)
 		return "", nil
 	}
+
+	// Log command to console
+	log.Printf("Parsing command: %s\n", command)
+
 	return command, arguments
 }
 
