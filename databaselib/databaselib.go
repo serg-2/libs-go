@@ -39,13 +39,16 @@ func (d *Database) Check() {
 	log.Println("Checking DB...")
 	err := d.Instance.Ping()
 	if err != nil {
-		log.Println("Checking DB - FAIL! Error:")
+		log.Println("Checking DB - FAIL! Error: ")
+		log.Println("---------------------------")
 		log.Println(err)
+		log.Println("===========================")
 		for {
 			log.Println("Reconnecting to DB...")
 			err2 := d.Instance.Ping()
 			if err2 != nil {
 				time.Sleep(5 * time.Second)
+				log.Println("Reconnecting after timeout...")
 			} else {
 				log.Println("Reconnect to DB successfully.")
 				break
