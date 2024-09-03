@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	tag "github.com/dhowden/tag"
 	cl "github.com/serg-2/libs-go/commonlib"
@@ -237,7 +236,7 @@ func WriteLog(message tgbotapi.Update) {
 
 // SendPictureFile - send picture
 func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgbotapi.BotAPI) {
-	photoBytes, err := ioutil.ReadFile(filename)
+	photoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		cl.ChkNonFatal(err)
 	}
@@ -252,7 +251,7 @@ func SendPictureFile(chatId int64, filename string, pictureName string, bot *tgb
 
 // SendVideoFile - Send video
 func SendVideoFile(chatId int64, filename string, videoCaption string, bot *tgbotapi.BotAPI) {
-	videoBytes, err := ioutil.ReadFile(filename)
+	videoBytes, err := os.ReadFile(filename)
 	if err != nil {
 		cl.ChkNonFatal(err)
 	}
@@ -266,7 +265,7 @@ func SendVideoFile(chatId int64, filename string, videoCaption string, bot *tgbo
 }
 
 func readBytes(filename string) tgbotapi.FileBytes {
-	fileBytes, err := ioutil.ReadFile(filename)
+	fileBytes, err := os.ReadFile(filename)
 	cl.ChkNonFatal(err)
 
 	tgFileBytes := tgbotapi.FileBytes{
@@ -395,7 +394,7 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// Old style init webHook
 	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
 	// New Style init webHook
-	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+	webHook := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
 	_, err = bot.Request(webHook)
 	if err != nil {
 		switch err.(type) {
