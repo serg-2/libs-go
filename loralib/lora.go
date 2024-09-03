@@ -1,6 +1,6 @@
 package loralib
 
-import "github.com/stianeikeland/go-rpio"
+import "github.com/stianeikeland/go-rpio/v4"
 import "time"
 import "os"
 import "log"

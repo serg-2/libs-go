@@ -394,7 +394,7 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// Old style init webHook
 	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
 	// New Style init webHook
-	webHook := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+	webHook,_ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
 	_, err = bot.Request(webHook)
 	if err != nil {
 		switch err.(type) {
