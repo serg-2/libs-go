@@ -8,7 +8,17 @@ import (
 	"time"
 )
 
+// Point type
+type Point struct {
+	Lat  float64
+	Long float64
+}
+
 const R = 6373000
+
+func CalculateDistanceBetweenPoints(a Point, b Point) float64 {
+	return CalculateDistance([2]float64{a.Lat, b.Lat}, [2]float64{a.Long, b.Long})
+}
 
 func CalculateDistance(a [2]float64, b [2]float64) float64 {
 	_diffLong := (math.Pi / 180) * math.Abs(b[1]-a[1])
@@ -218,10 +228,10 @@ func GenerateNMEAGGA(lat, long, alt float64) string {
 	heightOfGeoid := 13.2
 
 	lat_min := (lat - float64(int64(lat))) * 60
-	lat_d := float64(int64(lat)) * 100 + lat_min
+	lat_d := float64(int64(lat))*100 + lat_min
 
 	lon_min := (long - float64(int64(long))) * 60
-	lon_d := float64(int64(long)) * 100 + lon_min
+	lon_d := float64(int64(long))*100 + lon_min
 
 	if lat_d < 0 {
 		lat_s = fmt.Sprintf("%9.4f", -lat_d)
@@ -254,17 +264,17 @@ func GenerateNMEAGGA(lat, long, alt float64) string {
 	return nmeaMessage
 }
 
-func ConvertXYZtoLatLongAlt(x,y,z float64, ref_lat,ref_lon,ref_z float64, ugol float64) (float64,float64,float64) {
+func ConvertXYZtoLatLongAlt(x, y, z float64, ref_lat, ref_lon, ref_z float64, ugol float64) (float64, float64, float64) {
 	// XY - Right side
 	// ugol - Counter clockwise
 
 	T := ugol * math.Pi / 180
 
 	meridian := 111134.861111
-	parallel := (40075696 * math.Cos (ref_lat * math.Pi / 180)) / 360
+	parallel := (40075696 * math.Cos(ref_lat*math.Pi/180)) / 360
 
-	new_x := (x * math.Cos(T) - y*math.Sin(T)) / parallel + ref_lon
-	new_y := (x * math.Sin(T) + y*math.Cos(T)) / meridian + ref_lat
+	new_x := (x*math.Cos(T)-y*math.Sin(T))/parallel + ref_lon
+	new_y := (x*math.Sin(T)+y*math.Cos(T))/meridian + ref_lat
 	new_z := z + ref_z
-	return new_y,new_x,new_z
+	return new_y, new_x, new_z
 }
