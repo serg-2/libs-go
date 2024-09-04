@@ -17,7 +17,7 @@ type Point struct {
 const R = 6373000
 
 func CalculateDistanceBetweenPoints(a Point, b Point) float64 {
-	return CalculateDistance([2]float64{a.Lat, b.Lat}, [2]float64{a.Long, b.Long})
+	return CalculateDistance([2]float64{a.Lat, a.Long}, [2]float64{b.Lat, b.Long})
 }
 
 func CalculateDistance(a [2]float64, b [2]float64) float64 {
