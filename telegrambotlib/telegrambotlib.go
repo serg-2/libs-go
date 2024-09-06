@@ -173,7 +173,7 @@ func SendToGroup(message string, userList []int64, bot *tgbotapi.BotAPI) {
 	}
 }
 
-func SendPictureUrl(chatId int64, link string, pictureName string, bot *tgbotapi.BotAPI) error {
+func SendPictureUrl(chatId int64, link string, pictureName string, caption string, bot *tgbotapi.BotAPI) error {
 	response, e := http.Get(link)
 	if e != nil {
 		log.Println("Error getting link during sendPictureUrl", e, e.Error())
@@ -195,6 +195,12 @@ func SendPictureUrl(chatId int64, link string, pictureName string, bot *tgbotapi
 	}
 
 	photoUpload := tgbotapi.NewPhoto(chatId, photoFileBytes)
+
+	// Add caption
+	if caption != "" {
+		photoUpload.Caption = caption
+	}
+
 	_, err = bot.Send(photoUpload)
 	if err != nil {
 		return err
@@ -394,7 +400,7 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// Old style init webHook
 	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
 	// New Style init webHook
-	webHook,_ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
 	_, err = bot.Request(webHook)
 	if err != nil {
 		switch err.(type) {
