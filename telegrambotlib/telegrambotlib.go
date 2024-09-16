@@ -2,7 +2,6 @@ package telegrambotlib
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,24 +21,6 @@ import (
 )
 
 const MAXIMUM_TRACK_IN_PLAYLIST_SIZE = 7
-
-// LoadCommands - Load commands from JSON file
-func LoadCommands(file string) []CommandStruct {
-	var config []CommandStruct
-	configFile, err := os.Open(file)
-	defer configFile.Close()
-	if err != nil {
-		log.Fatalln("Can't open commands file " + file)
-		//log.Println(err.Error())
-	}
-	jsonParser := json.NewDecoder(configFile)
-	err = jsonParser.Decode(&config)
-	if err != nil {
-		log.Fatalln("Bad JSON in " + file)
-		//log.Println(err.Error())
-	}
-	return config
-}
 
 // CheckAndGetCommand - Checks command and get it.
 func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []string) {
