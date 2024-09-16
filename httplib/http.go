@@ -37,3 +37,11 @@ func AddHeaders(req *http.Request, headers map[string]string) {
 		req.Header.Add(header, value)
 	}
 }
+
+func AddRequestVars(req *http.Request, reqVars map[string]string) {
+	q := req.URL.Query()
+	for vari, value := range reqVars {
+		q.Add(vari, value)
+	}
+	req.URL.RawQuery = q.Encode()
+}
