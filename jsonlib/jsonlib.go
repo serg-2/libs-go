@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"reflect"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -26,10 +27,12 @@ func LoadJsonFromFile[T any](file string) T {
 		log.Fatalln("Bad JSON in " + file + "\nError:" + err.Error())
 	}
 
-	// Validate always
-	err = validator.New().Struct(loadedStructure)
-	if err != nil {
-		log.Fatalln("Error of validation: " + err.Error())
+	// Validate only structs!
+	if reflect.TypeOf(loadedStructure).Kind() != reflect.Slice {
+		err = validator.New().Struct(loadedStructure)
+		if err != nil {
+			log.Fatalln("Error of validation: " + err.Error())
+		}
 	}
 
 	return loadedStructure
