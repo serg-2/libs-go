@@ -6,7 +6,14 @@ import (
 	"time"
 )
 
-func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int) *http.Response {
+func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int, options ...bool) *http.Response {
+	// Parse options
+	critical := true
+	if len(options) > 0 {
+		critical = options[0]
+	}
+
+	// MAIN
 	var resp *http.Response
 	var err error
 	var errorCounter int
@@ -23,8 +30,14 @@ func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int) *http.Re
 		}
 		errorCounter++
 		if errorCounter > numberOfTries {
-			log.Println("Exceeded error count. Aborting...")
-			log.Fatal()
+			if critical {
+				// critical call
+				log.Println("Exceeded error count. Aborting...")
+				log.Fatal()
+			} else {
+				// non critical call
+				return nil
+			}
 		}
 		time.Sleep(time.Duration(timeOutSecs) * time.Second)
 	}
