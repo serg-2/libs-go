@@ -24,7 +24,7 @@ func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int, options 
 			if resp.StatusCode == 200 {
 				break
 			}
-			log.Printf("Received bad http code: %d\n", resp.StatusCode)
+			log.Printf("Received bad http code: %d. Try number: %d\n", resp.StatusCode, errorCounter)
 		} else {
 			log.Printf("Problem to get \"%s\". Try number: %d\n Error: %v\n", req.URL.String(), errorCounter, err)
 		}
