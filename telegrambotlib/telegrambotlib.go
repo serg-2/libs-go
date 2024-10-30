@@ -297,7 +297,7 @@ func SendMediaFiles(bot *tgbotapi.BotAPI, chatId int64, mediaType string, filena
 }
 
 // SendByteArrayFile - Send Byte array to file
-func SendByteArrayFile(chatId int64, byteArray []byte, filename string, bot *tgbotapi.BotAPI) {
+func SendByteArrayFile(chatId int64, byteArray []byte, filename string, caption string, bot *tgbotapi.BotAPI) {
 	// Creating filename and payload
 	fileInterface := tgbotapi.FileBytes{
 		Name:  filename,
@@ -306,6 +306,12 @@ func SendByteArrayFile(chatId int64, byteArray []byte, filename string, bot *tgb
 
 	// Sending answer
 	docUpload := tgbotapi.NewDocument(chatId, fileInterface)
+
+	// Add caption
+	if caption != "" {
+		docUpload.Caption = caption
+	}
+
 	bot.Send(docUpload)
 }
 
