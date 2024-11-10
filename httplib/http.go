@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int, options ...bool) *http.Response {
+func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int, nameOfRequest string, options ...bool) *http.Response {
 	// Parse options
 	critical := true
 	if len(options) > 0 {
@@ -24,15 +24,26 @@ func GetResponse(req *http.Request, numberOfTries int, timeOutSecs int, options 
 			if resp.StatusCode == 200 {
 				break
 			}
-			log.Printf("Received bad http code: %d. Try number: %d\n", resp.StatusCode, errorCounter)
+			log.Printf(
+				"%s: Received bad http code: %d. Try number: %d\n",
+				nameOfRequest,
+				resp.StatusCode,
+				errorCounter,
+			)
 		} else {
-			log.Printf("Problem to get \"%s\". Try number: %d\n Error: %v\n", req.URL.String(), errorCounter, err)
+			log.Printf(
+				"%s: Problem to get \"%s\". Try number: %d\n Error: %v\n",
+				nameOfRequest,
+				req.URL.String(),
+				errorCounter,
+				err,
+			)
 		}
 		errorCounter++
 		if errorCounter > numberOfTries {
 			if critical {
 				// critical call
-				log.Println("Exceeded error count. Aborting...")
+				log.Printf("%s: Exceeded error count. Aborting...\n", nameOfRequest)
 				log.Fatal()
 			} else {
 				// non critical call
