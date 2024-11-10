@@ -315,6 +315,30 @@ func SendByteArrayFile(chatId int64, byteArray []byte, filename string, caption 
 	bot.Send(docUpload)
 }
 
+// SendFileName - Send filename
+func SendFileName(chatId int64, filename string, caption string, bot *tgbotapi.BotAPI) {
+	fileBytes, err := os.ReadFile(filename)
+	if err != nil {
+		cl.ChkNonFatal(err)
+	}
+	
+	// Creating filename and payload
+	fileInterface := tgbotapi.FileBytes{
+		Name:  filename,
+		Bytes: fileBytes,
+	}
+
+	// Sending answer
+	docUpload := tgbotapi.NewDocument(chatId, fileInterface)
+
+	// Add caption
+	if caption != "" {
+		docUpload.Caption = caption
+	}
+
+	bot.Send(docUpload)
+}
+
 // BotInitialize - initialize new bot
 func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
 
