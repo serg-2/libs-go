@@ -41,6 +41,10 @@ func CalculateDistanceLambert(a [2]float64, b [2]float64) float64 {
 	return eqR * (_c - (f/float64(2))*(X+Y))
 }
 
+func CalculateDistanceBetweenPointsLambert(a Point, b Point) float64 {
+	return CalculateDistanceLambert([2]float64{a.Lat, a.Long}, [2]float64{b.Lat, b.Long})
+}
+
 func CalculateDistanceBetweenPoints(a Point, b Point) float64 {
 	return CalculateDistance([2]float64{a.Lat, a.Long}, [2]float64{b.Lat, b.Long})
 }
