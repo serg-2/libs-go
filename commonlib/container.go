@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
+// Container with Hashmap and Expiration
 type Container struct {
-	Storage map[any]time.Time
+	storage map[any]time.Time
 	mu      sync.Mutex
 	ttl     time.Duration
 }
@@ -14,7 +15,7 @@ type Container struct {
 // Constructor
 func NewContainer(ttl time.Duration) *Container {
 	var c Container
-	c.Storage = make(map[any]time.Time)
+	c.storage = make(map[any]time.Time)
 	c.ttl = ttl
 	return &c
 }
@@ -22,14 +23,14 @@ func NewContainer(ttl time.Duration) *Container {
 // Add - add to container
 func (c *Container) Add(value any) {
 	c.mu.Lock()
-	c.Storage[value] = time.Now().Add(c.ttl)
+	c.storage[value] = time.Now().Add(c.ttl)
 	c.mu.Unlock()
 }
 
 // Delete - remove from container
 func (c *Container) Delete(value any) {
 	c.mu.Lock()
-	delete(c.Storage, value)
+	delete(c.storage, value)
 	c.mu.Unlock()
 }
 
@@ -37,9 +38,9 @@ func (c *Container) Delete(value any) {
 func (c *Container) CheckExpired() {
 	now := time.Now()
 	c.mu.Lock()
-	for key, timeOfExpire := range c.Storage {
+	for key, timeOfExpire := range c.storage {
 		if now.After(timeOfExpire) {
-			delete(c.Storage, key)
+			delete(c.storage, key)
 		}
 	}
 	c.mu.Unlock()
@@ -49,6 +50,6 @@ func (c *Container) CheckExpired() {
 func (c *Container) CheckInside(value any) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	_, ok := c.Storage[value]
+	_, ok := c.storage[value]
 	return ok
 }
