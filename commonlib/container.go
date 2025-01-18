@@ -9,21 +9,21 @@ import (
 type Container struct {
 	InternalMap map[any]time.Time
 	Mu          sync.Mutex
-	ttl         time.Duration
+	Ttl         time.Duration
 }
 
 // Constructor
 func NewContainer(ttl time.Duration) *Container {
 	var c Container
 	c.InternalMap = make(map[any]time.Time)
-	c.ttl = ttl
+	c.Ttl = ttl
 	return &c
 }
 
 // Add - add to container
 func (c *Container) Add(value any) {
 	c.Mu.Lock()
-	c.InternalMap[value] = time.Now().Add(c.ttl)
+	c.InternalMap[value] = time.Now().Add(c.Ttl)
 	c.Mu.Unlock()
 }
 
