@@ -10,6 +10,13 @@ type Container struct {
 	mu      sync.Mutex
 }
 
+// Constructor
+func NewContainer() *Container {
+	var c Container
+	c.Storage = make(map[any]time.Time)
+	return &c
+}
+
 // Add - add to container
 func (c *Container) Add(value any) {
 	c.mu.Lock()
