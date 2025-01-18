@@ -38,3 +38,14 @@ func (c *Hashset) CheckInside(value any) bool {
 	_, ok := c.InternalHashset[value]
 	return ok
 }
+
+// GetAll - GetAll
+func (c *Hashset) GetAll(value any) []any {
+	c.Mut.Lock()
+	defer c.Mut.Unlock()
+	var result []any
+	for val := range c.InternalHashset {
+		result = append(result, val)
+	}
+	return result
+}
