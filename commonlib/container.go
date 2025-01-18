@@ -8,19 +8,21 @@ import (
 type Container struct {
 	Storage map[any]time.Time
 	mu      sync.Mutex
+	ttl     time.Duration
 }
 
 // Constructor
-func NewContainer() *Container {
+func NewContainer(ttl time.Duration) *Container {
 	var c Container
 	c.Storage = make(map[any]time.Time)
+	c.ttl = ttl
 	return &c
 }
 
 // Add - add to container
 func (c *Container) Add(value any) {
 	c.mu.Lock()
-	c.Storage[value] = time.Now()
+	c.Storage[value] = time.Now().Add(c.ttl)
 	c.mu.Unlock()
 }
 
@@ -31,18 +33,16 @@ func (c *Container) Delete(value any) {
 	c.mu.Unlock()
 }
 
-// Check - check value after timestamp
-func (c *Container) CheckExpired(value any, timeOfExpiration time.Time) bool {
+// CheckExpired - wipe all expired
+func (c *Container) CheckExpired() {
+	now := time.Now()
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	timeToCheck, ok := c.Storage[value]
-	if !ok {
-		return false
+	for key, timeOfExpire := range c.Storage {
+		if now.After(timeOfExpire) {
+			delete(c.Storage, key)
+		}
 	}
-	if timeToCheck.After(timeOfExpiration) {
-		return true
-	}
-	return false
+	c.mu.Unlock()
 }
 
 // Check - check value inside map
