@@ -40,7 +40,7 @@ func (c *Hashset) CheckInside(value any) bool {
 }
 
 // GetAll - GetAll
-func (c *Hashset) GetAll(value any) []any {
+func (c *Hashset) GetAll() []any {
 	c.Mut.Lock()
 	defer c.Mut.Unlock()
 	var result []any
