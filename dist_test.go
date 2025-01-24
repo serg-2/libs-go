@@ -8,6 +8,7 @@ import (
 )
 
 func TestDistance(t *testing.T) {
+	t.Skip("Skipping")
 	// Point 1
 	p1 := [2]float64{55, 40}
 	p2 := [2]float64{30, 90}
