@@ -34,4 +34,10 @@ func TestRunelib(t *testing.T) {
 			string(c),
 		)
 	}
+
+	var e rune = '💎'
+	fmt.Println(e)
+	var f rune = '💲'
+	fmt.Println(f)
+	
 }
