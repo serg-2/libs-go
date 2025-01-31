@@ -374,14 +374,14 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	}
 
 	cl.ChkFatal(err)
-	
+	updates := bot.ListenForWebhook("/" + bot.Token)
+
 	receivedWebhook,_ := bot.GetWebhookInfo()
 	log.Printf(
-		"Will receive updates: %s\n",
+		"Will receive3 updates: %s\n",
 		strings.Join(receivedWebhook.AllowedUpdates, ","),
 	)
 
-	updates := bot.ListenForWebhook("/" + bot.Token)
 	go http.ListenAndServeTLS(config.ListenHost+":"+fmt.Sprintf("%d", config.Port), config.Certificate, config.Key, nil)
 
 	return bot, updates
