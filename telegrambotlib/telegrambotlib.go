@@ -354,10 +354,12 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// New Style init webHook
 	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
 
-	log.Printf(
-		"Will receive updates: %s\n",
-		strings.Join(webHook.AllowedUpdates, ","),
-	)
+	// webHook.AllowedUpdates = []string{"", }
+	// log.Printf(
+	// 	"Will receive updates: %s\n",
+	// 	strings.Join(webHook.AllowedUpdates, ","),
+	// )
+
 
 	_, err = bot.Request(webHook)
 	if err != nil {
@@ -372,6 +374,12 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	}
 
 	cl.ChkFatal(err)
+	
+	receivedWebhook,_ := bot.GetWebhookInfo()
+	log.Printf(
+		"Will receive updates: %s\n",
+		strings.Join(receivedWebhook.AllowedUpdates, ","),
+	)
 
 	updates := bot.ListenForWebhook("/" + bot.Token)
 	go http.ListenAndServeTLS(config.ListenHost+":"+fmt.Sprintf("%d", config.Port), config.Certificate, config.Key, nil)
