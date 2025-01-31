@@ -354,7 +354,7 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// New Style init webHook
 	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
 
-	// webHook.AllowedUpdates = []string{"", }
+	webHook.AllowedUpdates = []string{"message_reaction", "message_reaction_count", "chat_member"}
 	// log.Printf(
 	// 	"Will receive updates: %s\n",
 	// 	strings.Join(webHook.AllowedUpdates, ","),
