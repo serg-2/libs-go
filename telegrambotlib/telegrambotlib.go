@@ -321,7 +321,7 @@ func SendFileName(chatId int64, filename string, caption string, bot *tgbotapi.B
 	if err != nil {
 		cl.ChkNonFatal(err)
 	}
-	
+
 	// Creating filename and payload
 	fileInterface := tgbotapi.FileBytes{
 		Name:  filename,
@@ -353,6 +353,12 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
 	// New Style init webHook
 	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+
+	log.Printf(
+		"Will receive updates: %s\n",
+		strings.Join(webHook.AllowedUpdates, ","),
+	)
+
 	_, err = bot.Request(webHook)
 	if err != nil {
 		switch err.(type) {
