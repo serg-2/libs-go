@@ -20,3 +20,8 @@ func GetEmojiWithSelector(r rune) string {
 	result = append(result, 0xFE0F)
 	return string(result)
 }
+
+func GetSubstringFromString(s string, start int, length int) string {
+	return string([]rune(s)[start:start + length])
+}
+
