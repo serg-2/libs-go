@@ -55,7 +55,7 @@ func (c *Container) CheckInside(value any) bool {
 }
 
 // Size - Size of container
-func (c *Container) Size(value any) int {
+func (c *Container) Size() int {
 	c.Mu.Lock()
 	defer c.Mu.Unlock()
 	return len(c.InternalMap)
