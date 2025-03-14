@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -156,7 +157,7 @@ func (l *llmClient) GetAnswer(id string) string {
 	}
 	tmpVal := tmpReq.(request)
 
-	return tmpVal.result
+	return strings.TrimSuffix(tmpVal.result, "\n")
 }
 
 func (l *llmClient) GetFinishChannel(id string) *chan struct{} {
