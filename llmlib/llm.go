@@ -2,7 +2,6 @@ package llmlib
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -186,36 +185,6 @@ func (l *llmClient) GetDurationStatus(id string) time.Duration {
 	}
 	tmpVal := tmpReq.(request)
 	return time.Now().Sub(tmpVal.startTime)
-}
-
-func (l *llmClient) MakeRequest(channel *chan struct{}, question string) {
-	// Context Part
-	ctx := context.Background()
-
-	// Request Part
-	streamEnabled := false
-	req := &api.ChatRequest{
-		Model:    l.model,
-		Messages: getMessages(l.systemRequestMessage, question),
-		Stream:   &streamEnabled,
-		Options:  l.options,
-	}
-
-	// Response part
-	respFunc := func(resp api.ChatResponse) error {
-		fmt.Println(resp.Message.Content)
-		return nil
-	}
-
-	// Long operation
-	err := l.client.Chat(ctx, req, respFunc)
-	// End of long operation
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	close(*channel)
 }
 
 // local function to get messages array using different roles
