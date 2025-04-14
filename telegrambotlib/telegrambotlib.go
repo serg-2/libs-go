@@ -145,7 +145,8 @@ func SendLowLevelDelayed(targetChatId int64, message string, bot *tgbotapi.BotAP
 	}()
 }
 
-func ReplyLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI, replyToId int) {
+func ReplyLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI, replyToId int) []int {
+	var result []int
 	//	log.Printf("Full Message Size: %d\n", len(message))
 	for len(message) > MAX_MESSAGE_SIZE {
 		// Warning! Beware of splitting runes!
@@ -156,13 +157,16 @@ func ReplyLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI, rep
 
 		msg := tgbotapi.NewMessage(targetChatId, message[:MAX_MESSAGE_SIZE-corrector])
 		msg.ReplyToMessageID = replyToId
-		bot.Send(msg)
+		m, _ := bot.Send(msg)
+		result = append(result, m.MessageID)
 		message = message[MAX_MESSAGE_SIZE-corrector:]
 		//		log.Printf("Rest Message Size: %d\n", len(message))
 	}
 	msg := tgbotapi.NewMessage(targetChatId, message)
 	msg.ReplyToMessageID = replyToId
-	bot.Send(msg)
+	m, _ := bot.Send(msg)
+	result = append(result, m.MessageID)
+	return result
 }
 
 func SendToGroup(message string, userList []int64, bot *tgbotapi.BotAPI) {
