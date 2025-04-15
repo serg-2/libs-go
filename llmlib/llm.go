@@ -31,8 +31,8 @@ type request struct {
 }
 
 type SystemMessages struct {
-	Role    string
-	Content string
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 var availableModels []string = []string{"gemma2:2B", "gemma2:9B", "gemma2:27B", "llava:13b", "llava:34b"}
