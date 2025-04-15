@@ -18,7 +18,7 @@ type llmClient struct {
 	client               *api.Client
 	model                string
 	options              map[string]any
-	systemRequestMessage string
+	systemRequestMessage []api.Message
 	requests             cl.ContainerId
 }
 
@@ -30,13 +30,18 @@ type request struct {
 	finishedChannel chan struct{}
 }
 
+type SystemMessages struct {
+	Role    string
+	Content string
+}
+
 var availableModels []string = []string{"gemma2:2B", "gemma2:9B", "gemma2:27B", "llava:13b", "llava:34b"}
 
 func InitClient(
 	urlString string,
 	modelToSet string,
 	optionsToSet map[string]any,
-	systemRequestMessageToSet string,
+	systemRequestMessages []SystemMessages,
 ) (*llmClient, bool) {
 	l := &llmClient{}
 
@@ -52,7 +57,7 @@ func InitClient(
 	l.options = optionsToSet
 
 	// system request message
-	l.systemRequestMessage = systemRequestMessageToSet
+	l.systemRequestMessage = getApiMessages(systemRequestMessages)
 
 	// Client part
 	serverUrl, err := url.Parse(urlString)
@@ -80,6 +85,17 @@ func InitClient(
 	return l, true
 }
 
+func getApiMessages(systemRequestMessages []SystemMessages) []api.Message {
+	var result []api.Message
+	for _, message := range systemRequestMessages {
+		result = append(result, api.Message{
+			Role:    message.Role,
+			Content: message.Content,
+		})
+	}
+	return result
+}
+
 func (l *llmClient) AddRequest(question string) string {
 	id := uuid.New().String()
 
@@ -89,10 +105,13 @@ func (l *llmClient) AddRequest(question string) string {
 	// Request Part
 	streamEnabled := false
 	req := &api.ChatRequest{
-		Model:    l.model,
-		Messages: getMessages(l.systemRequestMessage, question),
-		Stream:   &streamEnabled,
-		Options:  l.options,
+		Model: l.model,
+		Messages: getMessages(
+			l.systemRequestMessage,
+			question,
+		),
+		Stream:  &streamEnabled,
+		Options: l.options,
 	}
 
 	// Response part
@@ -189,33 +208,28 @@ func (l *llmClient) GetDurationStatus(id string) time.Duration {
 }
 
 // local function to get messages array using different roles
-func getMessages(systemRequestMessage string, question string) []api.Message {
-	messages := []api.Message{
-		// api.Message{
-		// 	Role:    "system",
-		// 	Content: "Provide very brief, concise responses",
-		// },
-		// api.Message{
-		// 	Role:    "user",
-		// 	Content: "Name some unusual animals",
-		// },
-		// api.Message{
-		// 	Role:    "assistant",
-		// 	Content: "Monotreme, platypus, echidna",
-		// },
-		// api.Message{
-		// 	Role:    "user",
-		// 	Content: "which of these is the most dangerous?",
-		// },
+func getMessages(environmentMessages []api.Message, question string) []api.Message {
+	// api.Message{
+	// 	Role:    "system",
+	// 	Content: "Provide very brief, concise responses",
+	// },
+	// api.Message{
+	// 	Role:    "user",
+	// 	Content: "Name some unusual animals",
+	// },
+	// api.Message{
+	// 	Role:    "assistant",
+	// 	Content: "Monotreme, platypus, echidna",
+	// },
+	// api.Message{
+	// 	Role:    "user",
+	// 	Content: "which of these is the most dangerous?",
+	// },
 
-		{
-			Role:    "system",
-			Content: systemRequestMessage,
-		},
-		{
-			Role:    "user",
-			Content: question,
-		},
-	}
+	messages := append(environmentMessages, api.Message{
+		Role:    "user",
+		Content: question,
+	},
+	)
 	return messages
 }
