@@ -35,7 +35,12 @@ type SystemMessages struct {
 	Content string `json:"content"`
 }
 
-var availableModels []string = []string{"gemma2:2B", "gemma2:9B", "gemma2:27B", "llava:13b", "llava:34b"}
+var availableModels []string = []string{
+	"gemma3:12B", "gemma3:27B",
+	"llama3.3:70B",
+	"deepseek-r1:671B",
+	"llava:13b", "llava:34b",
+}
 
 func InitClient(
 	urlString string,
