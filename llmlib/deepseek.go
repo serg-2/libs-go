@@ -7,6 +7,7 @@ import (
 	"github.com/go-deepseek/deepseek"
 	dsr "github.com/go-deepseek/deepseek/request"
 	cl "github.com/serg-2/libs-go/commonlib"
+	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 var availableModelsDS []string = []string{
@@ -64,13 +65,22 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 
 func getRequestDS(l *llmClient, question string) *dsr.ChatCompletionsRequest {
 	streamEnabled := false
+	dsMessages := getMessagesDS(
+		l.systemRequestMessageDS,
+		question,
+	)
+	// Some log
+	for ind, mess := range dsMessages {
+		log.Printf("Request to DS:\n%d %s\n",
+			ind,
+			js.JsonAsString(mess),
+		)
+	}
+
 	return &dsr.ChatCompletionsRequest{
-		Model:  l.modelDS,
-		Stream: streamEnabled,
-		Messages: getMessagesDS(
-			l.systemRequestMessageDS,
-			question,
-		),
+		Model:    l.modelDS,
+		Stream:   streamEnabled,
+		Messages: dsMessages,
 	}
 }
 
