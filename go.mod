@@ -11,7 +11,7 @@ require (
 	github.com/serg-2/rtcm_lib v0.0.0-20200507100813-3f5653d6cd2b
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
-	golang.org/x/text v0.23.0
+	golang.org/x/text v0.24.0
 )
 
 require (
@@ -19,14 +19,14 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
 )
 
 require (
 	github.com/go-deepseek/deepseek v0.8.0
-	github.com/go-playground/validator/v10 v10.25.0
+	github.com/go-playground/validator/v10 v10.26.0
 	github.com/google/uuid v1.6.0
-	github.com/ollama/ollama v0.6.0
-	golang.org/x/sys v0.31.0 // indirect
+	github.com/ollama/ollama v0.6.5
+	golang.org/x/sys v0.32.0 // indirect
 )
