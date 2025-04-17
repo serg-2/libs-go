@@ -3,8 +3,10 @@ package llmlib
 import (
 	"context"
 	"log"
+	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/go-deepseek/deepseek"
 	dsr "github.com/go-deepseek/deepseek/request"
@@ -14,14 +16,12 @@ import (
 )
 
 type llmClient struct {
-	clientOllama               *api.Client
-	clientDS                   deepseek.Client
-	modelOllama                string
-	modelDS                    string
-	options                    map[string]any
-	systemRequestMessageOllama []api.Message
-	systemRequestMessageDS     []*dsr.Message
-	requests                   cl.ContainerId
+	clientOllama          *api.Client
+	clientDS              deepseek.Client
+	model                 string
+	options               map[string]any
+	systemRequestMessages []SystemMessages
+	requests              cl.ContainerId
 }
 
 type request struct {
@@ -37,7 +37,26 @@ type SystemMessages struct {
 	Content string `json:"content"`
 }
 
-func (l *llmClient) AddRequest(question string) string {
+var availableRoles []string = []string{
+	"system",
+	"user",
+	"assistant",
+	"tool",
+}
+
+func (l *llmClient) AddRequest(question string, previosMessages []SystemMessages) string {
+	// Validate system messages
+	if !validateSystemMessages(previosMessages) {
+		log.Println("Can't validate request.")
+		return ""
+	}
+
+	// Validate question
+	if !validateQuestion(question) {
+		log.Println("Can't validate question.")
+		return ""
+	}
+
 	id := uuid.New().String()
 
 	// Context Part
@@ -60,7 +79,7 @@ func (l *llmClient) AddRequest(question string) string {
 			}
 			close(waitCh)
 		}(
-			getRequestOllama(l, question),
+			getRequestOllama(l, question, previosMessages),
 			getResonseFunctionOllama(l, id),
 		)
 	} else if l.clientDS != nil {
@@ -79,10 +98,11 @@ func (l *llmClient) AddRequest(question string) string {
 			l.requests.Add(id, tmpVal)
 			close(waitCh)
 		}(
-			getRequestDS(l, question),
+			getRequestDS(l, question, previosMessages),
 		)
 	} else {
-		panic('2')
+		log.Println("Can't find clients.")
+		return ""
 	}
 
 	var newReq request = request{
@@ -95,6 +115,30 @@ func (l *llmClient) AddRequest(question string) string {
 	l.requests.Add(id, newReq)
 
 	return id
+}
+
+func validateQuestion(question string) bool {
+	if utf8.RuneCountInString(question) > 300 {
+		log.Printf("Too big user request message!\n")
+		return false
+	}
+	return true
+}
+
+func validateSystemMessages(previosMessages []SystemMessages) bool {
+	if len(previosMessages) > 30 {
+		log.Printf("Too big context!\n")
+		return false
+	}
+	for _, message := range previosMessages {
+		// Check role
+		if !slices.Contains(availableRoles, message.Role) {
+			log.Printf("Role %s unsupported.\n", message.Role)
+			return false
+		}
+		// Check length?
+	}
+	return true
 }
 
 func (l *llmClient) CheckRequest(id string) bool {
@@ -112,7 +156,6 @@ func (l *llmClient) GetAnswer(id string) string {
 		return "No such id."
 	}
 	tmpVal := tmpReq.(request)
-
 	return strings.TrimSuffix(tmpVal.result, "\n")
 }
 
@@ -122,7 +165,6 @@ func (l *llmClient) GetFinishChannel(id string) *chan struct{} {
 		return nil
 	}
 	tmpVal := tmpReq.(request)
-
 	return &tmpVal.finishedChannel
 }
 

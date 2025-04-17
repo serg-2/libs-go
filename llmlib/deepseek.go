@@ -7,7 +7,6 @@ import (
 	"github.com/go-deepseek/deepseek"
 	dsr "github.com/go-deepseek/deepseek/request"
 	cl "github.com/serg-2/libs-go/commonlib"
-	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 var availableModelsDS []string = []string{
@@ -28,13 +27,14 @@ func InitDSClient(
 	}
 
 	if modelToSet == "chat" {
-		l.modelDS = deepseek.DEEPSEEK_CHAT_MODEL
+		l.model = deepseek.DEEPSEEK_CHAT_MODEL
 	} else {
-		panic("1")
+		log.Println("Can't understand DS model to set.")
+		return nil, false
 	}
 
 	// system request message
-	l.systemRequestMessageDS = getApiMessagesDS(systemRequestMessages)
+	l.systemRequestMessages = systemRequestMessages
 
 	// Client init
 	var err error
@@ -63,24 +63,22 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 	return result
 }
 
-func getRequestDS(l *llmClient, question string) *dsr.ChatCompletionsRequest {
+func getRequestDS(l *llmClient, question string, previosMessages []SystemMessages) *dsr.ChatCompletionsRequest {
 	streamEnabled := false
-	dsMessages := getMessagesDS(
-		l.systemRequestMessageDS,
+	messages := getMessagesDS(
+		getApiMessagesDS(l.systemRequestMessages),
 		question,
 	)
-	// Some log
-	for ind, mess := range dsMessages {
-		log.Printf("Request to DS:\n%d %s\n",
-			ind,
-			js.JsonAsString(mess),
-		)
+	for _, prevMessage := range previosMessages {
+		messages = append(messages, &dsr.Message{
+			Role:    prevMessage.Role,
+			Content: prevMessage.Content,
+		})
 	}
-
 	return &dsr.ChatCompletionsRequest{
-		Model:    l.modelDS,
+		Model:    l.model,
 		Stream:   streamEnabled,
-		Messages: dsMessages,
+		Messages: messages,
 	}
 }
 

@@ -33,13 +33,13 @@ func InitOllamaClient(
 		return nil, false
 	}
 
-	l.modelOllama = modelToSet
+	l.model = modelToSet
 
 	// options part
 	l.options = optionsToSet
 
 	// system request message
-	l.systemRequestMessageOllama = getApiMessagesOllama(systemRequestMessages)
+	l.systemRequestMessages = systemRequestMessages
 
 	// Client part
 	serverUrl, err := url.Parse(urlString)
@@ -78,16 +78,23 @@ func getApiMessagesOllama(systemRequestMessages []SystemMessages) []api.Message 
 	return result
 }
 
-func getRequestOllama(l *llmClient, question string) *api.ChatRequest {
+func getRequestOllama(l *llmClient, question string, previosMessages []SystemMessages) *api.ChatRequest {
 	streamEnabled := false
+	messages := getMessagesOllama(
+		getApiMessagesOllama(l.systemRequestMessages),
+		question,
+	)
+	for _, prevMessage := range previosMessages {
+		messages = append(messages, api.Message{
+			Role:    prevMessage.Role,
+			Content: prevMessage.Content,
+		})
+	}
 	return &api.ChatRequest{
-		Model: l.modelOllama,
-		Messages: getMessagesOllama(
-			l.systemRequestMessageOllama,
-			question,
-		),
-		Stream:  &streamEnabled,
-		Options: l.options,
+		Model:    l.model,
+		Messages: messages,
+		Stream:   &streamEnabled,
+		Options:  l.options,
 	}
 }
 
