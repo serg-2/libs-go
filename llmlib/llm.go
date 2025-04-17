@@ -15,7 +15,7 @@ import (
 	cl "github.com/serg-2/libs-go/commonlib"
 )
 
-type llmClient struct {
+type LLMClient struct {
 	clientOllama          *api.Client
 	clientDS              deepseek.Client
 	model                 string
@@ -44,7 +44,7 @@ var availableRoles []string = []string{
 	"tool",
 }
 
-func (l *llmClient) AddRequest(question string, previosMessages []SystemMessages) string {
+func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages) string {
 	// Validate system messages
 	if !validateSystemMessages(previosMessages) {
 		log.Println("Can't validate request.")
@@ -141,7 +141,7 @@ func validateSystemMessages(previosMessages []SystemMessages) bool {
 	return true
 }
 
-func (l *llmClient) CheckRequest(id string) bool {
+func (l *LLMClient) CheckRequest(id string) bool {
 	tmpVal := l.requests.Get(id)
 	if tmpVal == nil {
 		return false
@@ -150,7 +150,7 @@ func (l *llmClient) CheckRequest(id string) bool {
 	return tmpReq.finished
 }
 
-func (l *llmClient) GetAnswer(id string) string {
+func (l *LLMClient) GetAnswer(id string) string {
 	tmpReq := l.requests.Get(id)
 	if tmpReq == nil {
 		return "No such id."
@@ -159,7 +159,7 @@ func (l *llmClient) GetAnswer(id string) string {
 	return strings.TrimSuffix(tmpVal.result, "\n")
 }
 
-func (l *llmClient) GetFinishChannel(id string) *chan struct{} {
+func (l *LLMClient) GetFinishChannel(id string) *chan struct{} {
 	tmpReq := l.requests.Get(id)
 	if tmpReq == nil {
 		return nil
@@ -168,7 +168,7 @@ func (l *llmClient) GetFinishChannel(id string) *chan struct{} {
 	return &tmpVal.finishedChannel
 }
 
-func (l *llmClient) GetCompletedFor(id string) time.Duration {
+func (l *LLMClient) GetCompletedFor(id string) time.Duration {
 	tmpReq := l.requests.Get(id)
 	if tmpReq == nil {
 		return 0
@@ -177,7 +177,7 @@ func (l *llmClient) GetCompletedFor(id string) time.Duration {
 	return tmpVal.duration
 }
 
-func (l *llmClient) GetDurationStatus(id string) time.Duration {
+func (l *LLMClient) GetDurationStatus(id string) time.Duration {
 	tmpReq := l.requests.Get(id)
 	if tmpReq == nil {
 		return 0

@@ -24,8 +24,8 @@ func InitOllamaClient(
 	modelToSet string,
 	optionsToSet map[string]any,
 	systemRequestMessages []SystemMessages,
-) (*llmClient, bool) {
-	l := &llmClient{}
+) (*LLMClient, bool) {
+	l := &LLMClient{}
 
 	// Set Model
 	if !slices.Contains(availableModelsOllama, modelToSet) {
@@ -78,7 +78,7 @@ func getApiMessagesOllama(systemRequestMessages []SystemMessages) []api.Message 
 	return result
 }
 
-func getRequestOllama(l *llmClient, question string, previosMessages []SystemMessages) *api.ChatRequest {
+func getRequestOllama(l *LLMClient, question string, previosMessages []SystemMessages) *api.ChatRequest {
 	streamEnabled := false
 	messages := getMessagesOllama(
 		getApiMessagesOllama(l.systemRequestMessages),
@@ -98,7 +98,7 @@ func getRequestOllama(l *llmClient, question string, previosMessages []SystemMes
 	}
 }
 
-func getResonseFunctionOllama(l *llmClient, id string) func(resp api.ChatResponse) error {
+func getResonseFunctionOllama(l *LLMClient, id string) func(resp api.ChatResponse) error {
 	return func(resp api.ChatResponse) error {
 		tmpVal := l.requests.Get(id).(request)
 

@@ -17,8 +17,8 @@ func InitDSClient(
 	modelToSet string,
 	systemRequestMessages []SystemMessages,
 	apiKey string,
-) (*llmClient, bool) {
-	l := &llmClient{}
+) (*LLMClient, bool) {
+	l := &LLMClient{}
 
 	// Set Model
 	if !slices.Contains(availableModelsDS, modelToSet) {
@@ -63,7 +63,7 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 	return result
 }
 
-func getRequestDS(l *llmClient, question string, previosMessages []SystemMessages) *dsr.ChatCompletionsRequest {
+func getRequestDS(l *LLMClient, question string, previosMessages []SystemMessages) *dsr.ChatCompletionsRequest {
 	streamEnabled := false
 	messages := getMessagesDS(
 		getApiMessagesDS(l.systemRequestMessages),
