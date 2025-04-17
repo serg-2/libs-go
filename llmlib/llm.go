@@ -3,23 +3,25 @@ package llmlib
 import (
 	"context"
 	"log"
-	"net/http"
-	"net/url"
-	"slices"
 	"strings"
 	"time"
 
+	"github.com/go-deepseek/deepseek"
+	dsr "github.com/go-deepseek/deepseek/request"
 	"github.com/google/uuid"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
 )
 
 type llmClient struct {
-	client               *api.Client
-	model                string
-	options              map[string]any
-	systemRequestMessage []api.Message
-	requests             cl.ContainerId
+	clientOllama               *api.Client
+	clientDS                   deepseek.Client
+	modelOllama                string
+	modelDS                    string
+	options                    map[string]any
+	systemRequestMessageOllama []api.Message
+	systemRequestMessageDS     []*dsr.Message
+	requests                   cl.ContainerId
 }
 
 type request struct {
@@ -35,123 +37,53 @@ type SystemMessages struct {
 	Content string `json:"content"`
 }
 
-var availableModels []string = []string{
-	"gemma3:12B", "gemma3:27B",
-	"llama3.3:70B",
-	"deepseek-r1:671B",
-	"llava:13b", "llava:34b",
-}
-
-func InitClient(
-	urlString string,
-	modelToSet string,
-	optionsToSet map[string]any,
-	systemRequestMessages []SystemMessages,
-) (*llmClient, bool) {
-	l := &llmClient{}
-
-	// Set Model
-	if !slices.Contains(availableModels, modelToSet) {
-		log.Printf("Model %s unsupported.", modelToSet)
-		return nil, false
-	}
-
-	l.model = modelToSet
-
-	// options part
-	l.options = optionsToSet
-
-	// system request message
-	l.systemRequestMessage = getApiMessages(systemRequestMessages)
-
-	// Client part
-	serverUrl, err := url.Parse(urlString)
-	if err != nil {
-		log.Println("Can't parse url!")
-		log.Println(err)
-		return nil, false
-	}
-	// Client init
-	l.client = api.NewClient(serverUrl, http.DefaultClient)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Millisecond*1000))
-	defer cancel()
-
-	// Check Client
-	if l.client.Heartbeat(ctx) != nil {
-		log.Println("Server is not ok: " + urlString)
-		return nil, false
-	}
-
-	// Set requests
-	l.requests = *cl.NewContainerId()
-
-	// All ok
-	return l, true
-}
-
-func getApiMessages(systemRequestMessages []SystemMessages) []api.Message {
-	var result []api.Message
-	for _, message := range systemRequestMessages {
-		result = append(result, api.Message{
-			Role:    message.Role,
-			Content: message.Content,
-		})
-	}
-	return result
-}
-
 func (l *llmClient) AddRequest(question string) string {
 	id := uuid.New().String()
 
 	// Context Part
 	ctx := context.Background()
 
-	// Request Part
-	streamEnabled := false
-	req := &api.ChatRequest{
-		Model: l.model,
-		Messages: getMessages(
-			l.systemRequestMessage,
-			question,
-		),
-		Stream:  &streamEnabled,
-		Options: l.options,
-	}
-
-	// Response part
-	respFunc := func(resp api.ChatResponse) error {
-		tmpVal := l.requests.Get(id).(request)
-
-		tmpVal.finished = true
-		tmpVal.result = resp.Message.Content
-		tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-
-		l.requests.Add(id, tmpVal)
-		return nil
-	}
-
 	waitCh := make(chan struct{})
-	go func() {
-		err := l.client.Chat(ctx, req, respFunc)
-		if err != nil {
-			log.Println("Error in Chat handling")
-			log.Println(err)
-			tmpReq := l.requests.Get(id)
-			if tmpReq == nil {
-				log.Fatalln("UNSUPPORTED!")
+
+	if l.clientOllama != nil {
+		// OLLAMA
+		go func(chatRequest *api.ChatRequest, responseFunction func(resp api.ChatResponse) error) {
+			err := l.clientOllama.Chat(ctx, chatRequest, responseFunction)
+			if err != nil {
+				log.Println("Error in Chat handling")
+				log.Println(err)
+				tmpVal := l.requests.Get(id).(request)
+				tmpVal.finished = true
+				tmpVal.result = "Error in Chat handling: " + err.Error()
+				tmpVal.duration = time.Now().Sub(tmpVal.startTime)
+				l.requests.Add(id, tmpVal)
 			}
-			tmpVal := tmpReq.(request)
-
-			tmpVal.finished = true
-			tmpVal.result = "Error in Chat handling: " + err.Error()
+			close(waitCh)
+		}(
+			getRequestOllama(l, question),
+			getResonseFunctionOllama(l, id),
+		)
+	} else if l.clientDS != nil {
+		go func(chatRequest *dsr.ChatCompletionsRequest) {
+			chatResp, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
+			tmpVal := l.requests.Get(id).(request)
+			if err != nil {
+				log.Println("Error in Chat handling DS")
+				log.Println(err)
+				tmpVal.result = "Error in Chat handling: " + err.Error()
+			} else {
+				tmpVal.result = chatResp.Choices[0].Message.Content
+			}
 			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-
+			tmpVal.finished = true
 			l.requests.Add(id, tmpVal)
-		}
-
-		close(waitCh)
-	}()
+			close(waitCh)
+		}(
+			getRequestDS(l, question),
+		)
+	} else {
+		panic('2')
+	}
 
 	var newReq request = request{
 		false,
@@ -210,31 +142,4 @@ func (l *llmClient) GetDurationStatus(id string) time.Duration {
 	}
 	tmpVal := tmpReq.(request)
 	return time.Now().Sub(tmpVal.startTime)
-}
-
-// local function to get messages array using different roles
-func getMessages(environmentMessages []api.Message, question string) []api.Message {
-	// api.Message{
-	// 	Role:    "system",
-	// 	Content: "Provide very brief, concise responses",
-	// },
-	// api.Message{
-	// 	Role:    "user",
-	// 	Content: "Name some unusual animals",
-	// },
-	// api.Message{
-	// 	Role:    "assistant",
-	// 	Content: "Monotreme, platypus, echidna",
-	// },
-	// api.Message{
-	// 	Role:    "user",
-	// 	Content: "which of these is the most dangerous?",
-	// },
-
-	messages := append(environmentMessages, api.Message{
-		Role:    "user",
-		Content: question,
-	},
-	)
-	return messages
 }

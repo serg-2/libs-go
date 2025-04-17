@@ -24,6 +24,7 @@ require (
 )
 
 require (
+	github.com/go-deepseek/deepseek v0.8.0
 	github.com/go-playground/validator/v10 v10.25.0
 	github.com/google/uuid v1.6.0
 	github.com/ollama/ollama v0.6.0
