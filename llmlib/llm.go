@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
+	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 type LLMClient struct {
@@ -50,6 +51,8 @@ func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages
 		log.Println("Can't validate request.")
 		return ""
 	}
+
+	log.Printf("Additional context questions: %s\n", js.JsonAsString(previosMessages))
 
 	// Validate question
 	if !validateQuestion(question) {
