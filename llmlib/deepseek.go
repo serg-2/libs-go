@@ -65,29 +65,23 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 
 func getRequestDS(l *LLMClient, question string, previosMessages []SystemMessages) *dsr.ChatCompletionsRequest {
 	streamEnabled := false
-	messages := getMessagesDS(
-		getApiMessagesDS(l.systemRequestMessages),
-		question,
-	)
+
+	requestMessages := getApiMessagesDS(l.systemRequestMessages)
+	// Add Previous
 	for _, prevMessage := range previosMessages {
-		messages = append(messages, &dsr.Message{
+		requestMessages = append(requestMessages, &dsr.Message{
 			Role:    prevMessage.Role,
 			Content: prevMessage.Content,
 		})
 	}
+	// Add question
+	requestMessages = append(requestMessages, &dsr.Message{
+		Role:    "user",
+		Content: question,
+	})
 	return &dsr.ChatCompletionsRequest{
 		Model:    l.model,
 		Stream:   streamEnabled,
-		Messages: messages,
+		Messages: requestMessages,
 	}
-}
-
-// local function to get messages array using different roles
-func getMessagesDS(environmentMessages []*dsr.Message, question string) []*dsr.Message {
-	messages := append(environmentMessages, &dsr.Message{
-		Role:    "user",
-		Content: question,
-	},
-	)
-	return messages
 }

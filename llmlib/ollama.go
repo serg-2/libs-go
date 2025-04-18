@@ -80,39 +80,16 @@ func getApiMessagesOllama(systemRequestMessages []SystemMessages) []api.Message 
 
 func getRequestOllama(l *LLMClient, question string, previosMessages []SystemMessages) *api.ChatRequest {
 	streamEnabled := false
-	messages := getMessagesOllama(
-		getApiMessagesOllama(l.systemRequestMessages),
-		question,
-	)
+	
+	requestMessages := getApiMessagesOllama(l.systemRequestMessages)
+	
 	for _, prevMessage := range previosMessages {
-		messages = append(messages, api.Message{
+		requestMessages = append(requestMessages, api.Message{
 			Role:    prevMessage.Role,
 			Content: prevMessage.Content,
 		})
 	}
-	return &api.ChatRequest{
-		Model:    l.model,
-		Messages: messages,
-		Stream:   &streamEnabled,
-		Options:  l.options,
-	}
-}
 
-func getResonseFunctionOllama(l *LLMClient, id string) func(resp api.ChatResponse) error {
-	return func(resp api.ChatResponse) error {
-		tmpVal := l.requests.Get(id).(request)
-
-		tmpVal.finished = true
-		tmpVal.result = resp.Message.Content
-		tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-
-		l.requests.Add(id, tmpVal)
-		return nil
-	}
-}
-
-// local function to get messages array using different roles
-func getMessagesOllama(environmentMessages []api.Message, question string) []api.Message {
 	// api.Message{
 	// 	Role:    "system",
 	// 	Content: "Provide very brief, concise responses",
@@ -130,10 +107,28 @@ func getMessagesOllama(environmentMessages []api.Message, question string) []api
 	// 	Content: "which of these is the most dangerous?",
 	// },
 
-	messages := append(environmentMessages, api.Message{
+	requestMessages = append(requestMessages, api.Message{
 		Role:    "user",
 		Content: question,
-	},
-	)
-	return messages
+	})
+	
+	return &api.ChatRequest{
+		Model:    l.model,
+		Messages: requestMessages,
+		Stream:   &streamEnabled,
+		Options:  l.options,
+	}
+}
+
+func getResonseFunctionOllama(l *LLMClient, id string) func(resp api.ChatResponse) error {
+	return func(resp api.ChatResponse) error {
+		tmpVal := l.requests.Get(id).(request)
+
+		tmpVal.finished = true
+		tmpVal.result = resp.Message.Content
+		tmpVal.duration = time.Now().Sub(tmpVal.startTime)
+
+		l.requests.Add(id, tmpVal)
+		return nil
+	}
 }
