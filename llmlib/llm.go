@@ -87,6 +87,7 @@ func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages
 		)
 	} else if l.clientDS != nil {
 		go func(chatRequest *dsr.ChatCompletionsRequest) {
+			log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
 			chatResp, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
 			tmpVal := l.requests.Get(id).(request)
 			if err != nil {
