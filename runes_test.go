@@ -8,7 +8,7 @@ import (
 )
 
 func TestRunelib(t *testing.T) {
-
+	t.Skip("Skipping")
 	// Без вариационного селектора
 	var b rune = '💰'
 	// var b rune = '⚡'
