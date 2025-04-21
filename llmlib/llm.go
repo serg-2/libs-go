@@ -37,6 +37,9 @@ type request struct {
 type SystemMessages struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+	// Could be tool_call.name
+	Name       string `json:"name"`
+	ToolCallId string `json:"tool_call_id"`
 }
 
 type SystemToolCalls struct {
