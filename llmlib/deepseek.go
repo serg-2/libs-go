@@ -56,8 +56,10 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 	var result []*dsr.Message
 	for _, message := range systemRequestMessages {
 		result = append(result, &dsr.Message{
-			Role:    message.Role,
-			Content: message.Content,
+			Role:       message.Role,
+			Content:    message.Content,
+			Name:       message.Name,
+			ToolCallId: message.ToolCallId,
 		})
 	}
 	return result
@@ -88,6 +90,18 @@ func getRequestDS(
 		Model:    l.model,
 		Stream:   streamEnabled,
 		Messages: requestMessages,
-		Tools: tools,
+		Tools:    tools,
+	}
+}
+
+func getToolRequestDS(
+	l *LLMClient,
+	toolReply []SystemMessages,
+) *dsr.ChatCompletionsRequest {
+	return &dsr.ChatCompletionsRequest{
+		Model:    l.model,
+		Stream:   false,
+		Messages: getApiMessagesDS(toolReply),
+		Tools:    nil,
 	}
 }

@@ -142,6 +142,58 @@ func (l *LLMClient) AddRequest(
 	return id
 }
 
+func (l *LLMClient) AddToolResponse(
+	messages []SystemMessages,
+) string {
+	// Validate system messages
+	// HERE TBD
+
+	id := uuid.New().String()
+
+	// Context Part
+	ctx := context.Background()
+
+	waitCh := make(chan struct{})
+
+	if l.clientOllama != nil {
+		// TBD
+		return ""
+	} else if l.clientDS != nil {
+		go func(chatRequest *dsr.ChatCompletionsRequest) {
+			chatResp, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
+			tmpVal := l.requests.Get(id).(request)
+			if err != nil {
+				log.Println("Error in Chat handling DS")
+				log.Println(err)
+				tmpVal.result = "Error in Chat handling: " + err.Error()
+			} else {
+				parseResult(&tmpVal, chatResp.Choices[0])
+			}
+			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
+			tmpVal.finished = true
+			l.requests.Add(id, tmpVal)
+			close(waitCh)
+		}(
+			getToolRequestDS(l, messages),
+		)
+	} else {
+		log.Println("Can't find clients.")
+		return ""
+	}
+
+	var newReq request = request{
+		false,
+		time.Now(),
+		0,
+		waitCh,
+		"answer is not ready",
+		[]SystemToolCalls{},
+	}
+	l.requests.Add(id, newReq)
+
+	return id
+}
+
 func validateQuestion(question string) bool {
 	if utf8.RuneCountInString(question) > 300 {
 		log.Printf("Too big user request message!\n")
