@@ -63,7 +63,12 @@ func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
 	return result
 }
 
-func getRequestDS(l *LLMClient, question string, previosMessages []SystemMessages) *dsr.ChatCompletionsRequest {
+func getRequestDS(
+	l *LLMClient,
+	question string,
+	previosMessages []SystemMessages,
+	tools *[]dsr.Tool,
+) *dsr.ChatCompletionsRequest {
 	streamEnabled := false
 
 	requestMessages := getApiMessagesDS(l.systemRequestMessages)
@@ -83,5 +88,6 @@ func getRequestDS(l *LLMClient, question string, previosMessages []SystemMessage
 		Model:    l.model,
 		Stream:   streamEnabled,
 		Messages: requestMessages,
+		Tools: tools,
 	}
 }

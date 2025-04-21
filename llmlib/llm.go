@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
+	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 type LLMClient struct {
@@ -44,7 +45,11 @@ var availableRoles []string = []string{
 	"tool",
 }
 
-func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages) string {
+func (l *LLMClient) AddRequest(
+	question string,
+	previosMessages []SystemMessages,
+	tools *[]dsr.Tool,
+) string {
 	// Validate system messages
 	if !validateSystemMessages(previosMessages) {
 		log.Println("Can't validate request.")
@@ -68,6 +73,7 @@ func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages
 
 	if l.clientOllama != nil {
 		// OLLAMA
+		// NO TOOLS For Now
 		go func(chatRequest *api.ChatRequest, responseFunction func(resp api.ChatResponse) error) {
 			err := l.clientOllama.Chat(ctx, chatRequest, responseFunction)
 			if err != nil {
@@ -94,6 +100,7 @@ func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages
 				log.Println(err)
 				tmpVal.result = "Error in Chat handling: " + err.Error()
 			} else {
+				log.Printf("Received result:\n%s\n", js.JsonAsString(chatResp))
 				tmpVal.result = chatResp.Choices[0].Message.Content
 			}
 			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
@@ -101,7 +108,7 @@ func (l *LLMClient) AddRequest(question string, previosMessages []SystemMessages
 			l.requests.Add(id, tmpVal)
 			close(waitCh)
 		}(
-			getRequestDS(l, question, previosMessages),
+			getRequestDS(l, question, previosMessages, tools),
 		)
 	} else {
 		log.Println("Can't find clients.")
