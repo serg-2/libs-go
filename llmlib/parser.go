@@ -3,11 +3,16 @@ package llmlib
 import (
 	"log"
 
+	dsr "github.com/go-deepseek/deepseek/request"
 	"github.com/go-deepseek/deepseek/response"
 	js "github.com/serg-2/libs-go/jsonlib"
 )
 
-func parseResult(currentRequest *request, resp *response.Choice) {
+func parseResult(
+	currentRequest *request,
+	resp *response.Choice,
+	previousMessages []*dsr.Message,
+) {
 	switch resp.FinishReason {
 	case "stop":
 		currentRequest.result = resp.Message.Content
@@ -18,10 +23,25 @@ func parseResult(currentRequest *request, resp *response.Choice) {
 		} else {
 			currentRequest.result = "Answer is tool request"
 			currentRequest.resultCalls = reparseToolCalls(resp.Message.ToolCalls)
+			currentRequest.history = DStoSystem(previousMessages)
 		}
 	default:
 		log.Printf("Received unparsed choise:\n%s\n", js.JsonAsString(resp))
 	}
+}
+
+func DStoSystem(previousMessages []*dsr.Message) []SystemMessages {
+	var result []SystemMessages
+	for _, mess := range previousMessages {
+		result = append(result,
+			SystemMessages{
+				Role:       mess.Role,
+				Content:    mess.Content,
+				Name:       mess.Name,
+				ToolCallId: mess.ToolCallId,
+			})
+	}
+	return result
 }
 
 func reparseToolCalls(toolCall []*response.ToolCall) []SystemToolCalls {

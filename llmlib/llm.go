@@ -32,6 +32,8 @@ type request struct {
 
 	result      string
 	resultCalls []SystemToolCalls
+
+	history []SystemMessages
 }
 
 type SystemMessages struct {
@@ -115,7 +117,7 @@ func (l *LLMClient) AddRequest(
 				log.Println(err)
 				tmpVal.result = "Error in Chat handling: " + err.Error()
 			} else {
-				parseResult(&tmpVal, chatResp.Choices[0])
+				parseResult(&tmpVal, chatResp.Choices[0], chatRequest.Messages)
 			}
 			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
 			tmpVal.finished = true
@@ -136,6 +138,7 @@ func (l *LLMClient) AddRequest(
 		waitCh,
 		"answer is not ready",
 		[]SystemToolCalls{},
+		nil,
 	}
 	l.requests.Add(id, newReq)
 
@@ -167,7 +170,7 @@ func (l *LLMClient) AddToolResponse(
 				log.Println(err)
 				tmpVal.result = "Error in Chat handling: " + err.Error()
 			} else {
-				parseResult(&tmpVal, chatResp.Choices[0])
+				parseResult(&tmpVal, chatResp.Choices[0], chatRequest.Messages)
 			}
 			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
 			tmpVal.finished = true
@@ -188,6 +191,7 @@ func (l *LLMClient) AddToolResponse(
 		waitCh,
 		"answer is not ready",
 		[]SystemToolCalls{},
+		nil,
 	}
 	l.requests.Add(id, newReq)
 
@@ -234,6 +238,15 @@ func (l *LLMClient) GetAnswer(id string) string {
 	}
 	tmpVal := tmpReq.(request)
 	return strings.TrimSuffix(tmpVal.result, "\n")
+}
+
+func (l *LLMClient) GetHistory(id string) []SystemMessages {
+	tmpReq := l.requests.Get(id)
+	if tmpReq == nil {
+		return nil
+	}
+	tmpVal := tmpReq.(request)
+	return tmpVal.history
 }
 
 func (l *LLMClient) GetCallsFromAnswer(id string) []SystemToolCalls {
