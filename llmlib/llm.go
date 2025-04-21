@@ -13,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
-	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 type LLMClient struct {
@@ -27,15 +26,28 @@ type LLMClient struct {
 
 type request struct {
 	finished        bool
-	result          string
 	startTime       time.Time
 	duration        time.Duration
 	finishedChannel chan struct{}
+
+	result      string
+	resultCalls []SystemToolCalls
 }
 
 type SystemMessages struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
+}
+
+type SystemToolCalls struct {
+	Id       string             `json:"id"`
+	Type     string             `json:"type"`
+	Function SystemToolFunction `json:"function"`
+}
+
+type SystemToolFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 var availableRoles []string = []string{
@@ -100,8 +112,7 @@ func (l *LLMClient) AddRequest(
 				log.Println(err)
 				tmpVal.result = "Error in Chat handling: " + err.Error()
 			} else {
-				log.Printf("Received result:\n%s\n", js.JsonAsString(chatResp))
-				tmpVal.result = chatResp.Choices[0].Message.Content
+				parseResult(&tmpVal, chatResp.Choices[0])
 			}
 			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
 			tmpVal.finished = true
@@ -117,10 +128,11 @@ func (l *LLMClient) AddRequest(
 
 	var newReq request = request{
 		false,
-		"answer is not ready",
 		time.Now(),
 		0,
 		waitCh,
+		"answer is not ready",
+		[]SystemToolCalls{},
 	}
 	l.requests.Add(id, newReq)
 
@@ -167,6 +179,15 @@ func (l *LLMClient) GetAnswer(id string) string {
 	}
 	tmpVal := tmpReq.(request)
 	return strings.TrimSuffix(tmpVal.result, "\n")
+}
+
+func (l *LLMClient) GetCallsFromAnswer(id string) []SystemToolCalls {
+	tmpReq := l.requests.Get(id)
+	if tmpReq == nil {
+		return []SystemToolCalls{}
+	}
+	tmpVal := tmpReq.(request)
+	return tmpVal.resultCalls
 }
 
 func (l *LLMClient) GetFinishChannel(id string) *chan struct{} {
