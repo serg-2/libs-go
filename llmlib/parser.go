@@ -11,10 +11,12 @@ func parseResult(currentRequest *request, resp *response.Choice) {
 	switch resp.FinishReason {
 	case "stop":
 		currentRequest.result = resp.Message.Content
+		currentRequest.resultCalls = []SystemToolCalls{}
 	case "tool_calls":
 		if resp.Message.ToolCalls == nil {
 			log.Printf("Received empty tool calls:\n%s\n", js.JsonAsString(resp))
 		} else {
+			currentRequest.result = "Answer is tool request"
 			currentRequest.resultCalls = reparseToolCalls(resp.Message.ToolCalls)
 		}
 	default:

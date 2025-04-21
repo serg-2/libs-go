@@ -12,3 +12,10 @@ func marshallStructure(structureToMarshall interface{}) []byte {
 	}
 	return dataM
 }
+
+func UnmarshallString(source string, sourceInterface interface{}) interface{} {
+	if err := json.Unmarshal([]byte(source), &sourceInterface); err != nil {
+		log.Println("Can't unmarshall string: " + source)
+	}
+	return sourceInterface
+}
