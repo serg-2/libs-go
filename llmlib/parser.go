@@ -54,20 +54,17 @@ func SystemToDS(previousMessages []SystemMessages) []deepseek.ChatCompletionMess
 	var result []deepseek.ChatCompletionMessage
 	for _, mess := range previousMessages {
 		if mess.internalDSToolCalls != nil {
-			for _, tc := range mess.internalDSToolCalls {
-				result = append(result,
-					deepseek.ChatCompletionMessage{
-						Role:       "assistant",
-						Content:    "Запрашиваю выполнение функции: " + tc.Function.Name,
-						ToolCallID: tc.ID,
-					})
-			}
+			result = append(result,
+				deepseek.ChatCompletionMessage{
+					Role:      "assistant",
+					Content:   "Запрашиваю выполнение функций...",
+					ToolCalls: mess.internalDSToolCalls,
+				})
 		} else {
 			result = append(result,
 				deepseek.ChatCompletionMessage{
 					Role:       mess.Role,
 					Content:    mess.Content,
-					ToolCallID: mess.ToolCallId,
 				})
 		}
 	}
