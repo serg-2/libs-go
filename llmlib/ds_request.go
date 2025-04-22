@@ -49,7 +49,7 @@ func waitForAnswerDS(
 				toolsAnswers = append(toolsAnswers, &tmpMessage)
 			}
 			// Summary of answer
-			log.Printf("Requst with tools answer: %s\n", js.JsonAsString(toolsAnswers))
+			log.Printf("Request with tools answer: %s\n", js.JsonAsString(toolsAnswers))
 
 			newReq := &dsr.ChatCompletionsRequest{
 				Model:    l.model,

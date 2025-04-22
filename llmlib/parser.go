@@ -60,7 +60,7 @@ func SystemToDS(previousMessages []SystemMessages) []*dsr.Message {
 				result = append(result,
 					&dsr.Message{
 						Role:       "assistant",
-						Content:    "",
+						Content:    "Запрашиваю выполнение функции: " + tc.Function.Name,
 						Name:       tc.Function.Name,
 						ToolCallId: tc.Id,
 					})
