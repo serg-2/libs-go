@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/go-deepseek/deepseek"
+	"github.com/go-deepseek/deepseek/response"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
 )
@@ -35,6 +36,8 @@ type SystemMessages struct {
 	// Could be tool_call.name
 	Name       string `json:"name"`
 	ToolCallId string `json:"tool_call_id"`
+
+	internalDSToolCalls []*response.ToolCall
 }
 
 type SystemToolCalls struct {

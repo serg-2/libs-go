@@ -10,24 +10,31 @@ import (
 
 func parseResult(
 	currentRequest *request,
-	resp *response.Choice,
+	choice0 *response.Choice,
 	previousMessages []*dsr.Message,
 ) {
-	switch resp.FinishReason {
+	switch choice0.FinishReason {
 	case "stop":
-		currentRequest.result = resp.Message.Content
+		currentRequest.result = choice0.Message.Content
 		currentRequest.resultCalls = nil
 		currentRequest.history = DStoSystem(previousMessages)
 	case "tool_calls":
-		if resp.Message.ToolCalls == nil {
-			log.Printf("Received empty tool calls:\n%s\n", js.JsonAsString(resp))
+		if choice0.Message.ToolCalls == nil {
+			log.Printf("Received empty tool calls:\n%s\n", js.JsonAsString(choice0))
 		} else {
+			log.Println("Parsing tool calls...")
 			currentRequest.result = "Answer is tool request"
-			currentRequest.resultCalls = reparseToolCalls(resp.Message.ToolCalls)
+			currentRequest.resultCalls = reparseToolCalls(choice0.Message.ToolCalls)
 			currentRequest.history = DStoSystem(previousMessages)
+			currentRequest.history = append(currentRequest.history,
+				SystemMessages{
+					Role:                "assistant",
+					internalDSToolCalls: choice0.Message.ToolCalls,
+				},
+			)
 		}
 	default:
-		log.Printf("Received unparsed choise:\n%s\n", js.JsonAsString(resp))
+		log.Printf("Received unparsed choise:\n%s\n", js.JsonAsString(choice0))
 	}
 }
 
@@ -48,13 +55,25 @@ func DStoSystem(previousMessages []*dsr.Message) []SystemMessages {
 func SystemToDS(previousMessages []SystemMessages) []*dsr.Message {
 	var result []*dsr.Message
 	for _, mess := range previousMessages {
-		result = append(result,
-			&dsr.Message{
-				Role:       mess.Role,
-				Content:    mess.Content,
-				Name:       mess.Name,
-				ToolCallId: mess.ToolCallId,
-			})
+		if mess.internalDSToolCalls != nil {
+			for _, tc := range mess.internalDSToolCalls {
+				result = append(result,
+					&dsr.Message{
+						Role:       "assistant",
+						Content:    "",
+						Name:       tc.Function.Name,
+						ToolCallId: tc.Id,
+					})
+			}
+		} else {
+			result = append(result,
+				&dsr.Message{
+					Role:       mess.Role,
+					Content:    mess.Content,
+					Name:       mess.Name,
+					ToolCallId: mess.ToolCallId,
+				})
+		}
 	}
 	return result
 }
