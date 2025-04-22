@@ -3,57 +3,12 @@ package llmlib
 import (
 	"context"
 	"log"
-	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
-	"github.com/go-deepseek/deepseek"
 	dsr "github.com/go-deepseek/deepseek/request"
 	"github.com/google/uuid"
-	"github.com/ollama/ollama/api"
-	cl "github.com/serg-2/libs-go/commonlib"
 )
-
-type LLMClient struct {
-	clientOllama          *api.Client
-	clientDS              deepseek.Client
-	model                 string
-	options               map[string]any
-	systemRequestMessages []SystemMessages
-	requests              cl.ContainerId
-}
-
-type request struct {
-	finished        bool
-	startTime       time.Time
-	duration        time.Duration
-	finishedChannel chan struct{}
-
-	result      string
-	resultCalls []SystemToolCalls
-
-	history []SystemMessages
-}
-
-type SystemMessages struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	// Could be tool_call.name
-	Name       string `json:"name"`
-	ToolCallId string `json:"tool_call_id"`
-}
-
-type SystemToolCalls struct {
-	Id       string             `json:"id"`
-	Type     string             `json:"type"`
-	Function SystemToolFunction `json:"function"`
-}
-
-type SystemToolFunction struct {
-	Name      string `json:"name"`
-	Arguments string `json:"arguments"`
-}
 
 var availableRoles []string = []string{
 	"system",
@@ -66,6 +21,7 @@ func (l *LLMClient) AddRequest(
 	question string,
 	previosMessages []SystemMessages,
 	tools *[]dsr.Tool,
+	passedFunction PassedFunction,
 ) string {
 	// Validate system messages
 	if !validateSystemMessages(previosMessages) {
@@ -82,49 +38,28 @@ func (l *LLMClient) AddRequest(
 	}
 
 	id := uuid.New().String()
-
-	// Context Part
 	ctx := context.Background()
-
 	waitCh := make(chan struct{})
 
 	if l.clientOllama != nil {
 		// OLLAMA
 		// NO TOOLS For Now
-		go func(chatRequest *api.ChatRequest, responseFunction func(resp api.ChatResponse) error) {
-			err := l.clientOllama.Chat(ctx, chatRequest, responseFunction)
-			if err != nil {
-				log.Println("Error in Chat handling")
-				log.Println(err)
-				tmpVal := l.requests.Get(id).(request)
-				tmpVal.finished = true
-				tmpVal.result = "Error in Chat handling: " + err.Error()
-				tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-				l.requests.Add(id, tmpVal)
-			}
-			close(waitCh)
-		}(
+		go waitForAnswerOllama(
 			getRequestOllama(l, question, previosMessages),
 			getResonseFunctionOllama(l, id),
+			ctx,
+			waitCh,
+			l,
+			id,
 		)
 	} else if l.clientDS != nil {
-		go func(chatRequest *dsr.ChatCompletionsRequest) {
-			//log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
-			chatResp, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
-			tmpVal := l.requests.Get(id).(request)
-			if err != nil {
-				log.Println("Error in Chat handling DS")
-				log.Println(err)
-				tmpVal.result = "Error in Chat handling: " + err.Error()
-			} else {
-				parseResult(&tmpVal, chatResp.Choices[0], chatRequest.Messages)
-			}
-			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-			tmpVal.finished = true
-			l.requests.Add(id, tmpVal)
-			close(waitCh)
-		}(
+		go waitForAnswerDS(
 			getRequestDS(l, question, previosMessages, tools),
+			ctx,
+			waitCh,
+			l,
+			id,
+			passedFunction,
 		)
 	} else {
 		log.Println("Can't find clients.")
@@ -138,88 +73,11 @@ func (l *LLMClient) AddRequest(
 		waitCh,
 		"answer is not ready",
 		[]SystemToolCalls{},
-		nil,
+		[]SystemMessages{},
 	}
 	l.requests.Add(id, newReq)
 
 	return id
-}
-
-func (l *LLMClient) AddToolResponse(
-	messages []SystemMessages,
-) string {
-	// Validate system messages
-	// HERE TBD
-
-	id := uuid.New().String()
-
-	// Context Part
-	ctx := context.Background()
-
-	waitCh := make(chan struct{})
-
-	if l.clientOllama != nil {
-		// TBD
-		return ""
-	} else if l.clientDS != nil {
-		go func(chatRequest *dsr.ChatCompletionsRequest) {
-			chatResp, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
-			tmpVal := l.requests.Get(id).(request)
-			if err != nil {
-				log.Println("Error in Chat handling DS")
-				log.Println(err)
-				tmpVal.result = "Error in Chat handling: " + err.Error()
-			} else {
-				parseResult(&tmpVal, chatResp.Choices[0], chatRequest.Messages)
-			}
-			tmpVal.duration = time.Now().Sub(tmpVal.startTime)
-			tmpVal.finished = true
-			l.requests.Add(id, tmpVal)
-			close(waitCh)
-		}(
-			getToolRequestDS(l, messages),
-		)
-	} else {
-		log.Println("Can't find clients.")
-		return ""
-	}
-
-	var newReq request = request{
-		false,
-		time.Now(),
-		0,
-		waitCh,
-		"answer is not ready",
-		[]SystemToolCalls{},
-		nil,
-	}
-	l.requests.Add(id, newReq)
-
-	return id
-}
-
-func validateQuestion(question string) bool {
-	if utf8.RuneCountInString(question) > 300 {
-		log.Printf("Too big user request message!\n")
-		return false
-	}
-	return true
-}
-
-func validateSystemMessages(previosMessages []SystemMessages) bool {
-	if len(previosMessages) > 30 {
-		log.Printf("Too big context!\n")
-		return false
-	}
-	for _, message := range previosMessages {
-		// Check role
-		if !slices.Contains(availableRoles, message.Role) {
-			log.Printf("Role %s unsupported.\n", message.Role)
-			return false
-		}
-		// Check length?
-	}
-	return true
 }
 
 func (l *LLMClient) CheckRequest(id string) bool {

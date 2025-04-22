@@ -94,14 +94,3 @@ func getRequestDS(
 	}
 }
 
-func getToolRequestDS(
-	l *LLMClient,
-	toolReply []SystemMessages,
-) *dsr.ChatCompletionsRequest {
-	return &dsr.ChatCompletionsRequest{
-		Model:    l.model,
-		Stream:   false,
-		Messages: getApiMessagesDS(toolReply),
-		Tools:    nil,
-	}
-}

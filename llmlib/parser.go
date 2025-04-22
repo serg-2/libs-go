@@ -16,7 +16,8 @@ func parseResult(
 	switch resp.FinishReason {
 	case "stop":
 		currentRequest.result = resp.Message.Content
-		currentRequest.resultCalls = []SystemToolCalls{}
+		currentRequest.resultCalls = nil
+		currentRequest.history = DStoSystem(previousMessages)
 	case "tool_calls":
 		if resp.Message.ToolCalls == nil {
 			log.Printf("Received empty tool calls:\n%s\n", js.JsonAsString(resp))
@@ -35,6 +36,20 @@ func DStoSystem(previousMessages []*dsr.Message) []SystemMessages {
 	for _, mess := range previousMessages {
 		result = append(result,
 			SystemMessages{
+				Role:       mess.Role,
+				Content:    mess.Content,
+				Name:       mess.Name,
+				ToolCallId: mess.ToolCallId,
+			})
+	}
+	return result
+}
+
+func SystemToDS(previousMessages []SystemMessages) []*dsr.Message {
+	var result []*dsr.Message
+	for _, mess := range previousMessages {
+		result = append(result,
+			&dsr.Message{
 				Role:       mess.Role,
 				Content:    mess.Content,
 				Name:       mess.Name,
