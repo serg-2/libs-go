@@ -17,9 +17,12 @@ func waitForAnswerDS(
 	id string,
 	passedFunction PassedFunction,
 ) {
-	log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
+	log.Printf("DEBUG: Full Request: %s\n", js.JsonAsString(chatRequest))
+
 	firstResponse, err := l.clientDS.CreateChatCompletion(ctx, chatRequest)
-	log.Printf("FULL FIRST Response: %s\n", js.JsonAsString(firstResponse))
+
+	log.Printf("DEBUG: Full first Response: %s\n", js.JsonAsString(firstResponse))
+
 	currentRequest := l.requests.Get(id).(request)
 	if err != nil {
 		log.Println("Error in Chat handling DS")
@@ -48,7 +51,7 @@ func waitForAnswerDS(
 				toolsAnswers = append(toolsAnswers, tmpMessage)
 			}
 			// Summary of answer
-			log.Printf("Request with tools answer: %s\n", js.JsonAsString(toolsAnswers))
+			log.Printf("DEBUG: Request with tools answer: %s\n", js.JsonAsString(toolsAnswers))
 
 			requestAfterTools := &deepseek.ChatCompletionRequest{
 				Model:    l.model,
@@ -64,7 +67,7 @@ func waitForAnswerDS(
 
 			parseResult(&currentRequest, chatRespToTool.Choices[0], requestAfterTools.Messages)
 
-			log.Printf("DS Answer after tools:\n%s\n", js.JsonAsString(chatRespToTool))
+			log.Printf("DEBUG: Answer after tools answer:\n%s\n", js.JsonAsString(chatRespToTool))
 		}
 	}
 	currentRequest.duration = time.Now().Sub(currentRequest.startTime)
