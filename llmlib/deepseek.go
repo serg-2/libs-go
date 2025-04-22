@@ -36,13 +36,7 @@ func InitDSClient(
 	l.systemRequestMessages = systemRequestMessages
 
 	// Client init
-	var err error
 	l.clientDS = deepseek.NewClient(apiKey)
-	if err != nil {
-		log.Println("Can't get DS client")
-		log.Println(err)
-		return nil, false
-	}
 
 	// Set requests
 	l.requests = *cl.NewContainerId()
