@@ -17,8 +17,9 @@ func waitForAnswerDS(
 	id string,
 	passedFunction PassedFunction,
 ) {
-	//log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
+	log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
 	firstResponse, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
+	log.Printf("FULL FIRST Response: %s\n", js.JsonAsString(firstResponse))
 	currentRequest := l.requests.Get(id).(request)
 	if err != nil {
 		log.Println("Error in Chat handling DS")
@@ -62,7 +63,7 @@ func waitForAnswerDS(
 				log.Println("Error in Chat handling DS with TOOL")
 				log.Println(err2)
 			}
-			
+
 			log.Printf("DS Answer after tools:\n%s\n", js.JsonAsString(chatRespToTool))
 		}
 	}
@@ -71,4 +72,3 @@ func waitForAnswerDS(
 	l.requests.Add(id, currentRequest)
 	close(waitCh)
 }
-
