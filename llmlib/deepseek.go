@@ -4,8 +4,7 @@ import (
 	"log"
 	"slices"
 
-	"github.com/go-deepseek/deepseek"
-	dsr "github.com/go-deepseek/deepseek/request"
+	"github.com/cohesion-org/deepseek-go"
 	cl "github.com/serg-2/libs-go/commonlib"
 )
 
@@ -27,7 +26,7 @@ func InitDSClient(
 	}
 
 	if modelToSet == "chat" {
-		l.model = deepseek.DEEPSEEK_CHAT_MODEL
+		l.model = deepseek.DeepSeekChat
 	} else {
 		log.Println("Can't understand DS model to set.")
 		return nil, false
@@ -38,7 +37,7 @@ func InitDSClient(
 
 	// Client init
 	var err error
-	l.clientDS, err = deepseek.NewClient(apiKey)
+	l.clientDS = deepseek.NewClient(apiKey)
 	if err != nil {
 		log.Println("Can't get DS client")
 		log.Println(err)
@@ -52,14 +51,13 @@ func InitDSClient(
 	return l, true
 }
 
-func getApiMessagesDS(systemRequestMessages []SystemMessages) []*dsr.Message {
-	var result []*dsr.Message
+func getApiMessagesDS(systemRequestMessages []SystemMessages) []deepseek.ChatCompletionMessage {
+	var result []deepseek.ChatCompletionMessage
 	for _, message := range systemRequestMessages {
-		result = append(result, &dsr.Message{
+		result = append(result, deepseek.ChatCompletionMessage{
 			Role:       message.Role,
 			Content:    message.Content,
-			Name:       message.Name,
-			ToolCallId: message.ToolCallId,
+			ToolCallID: message.ToolCallId,
 		})
 	}
 	return result
@@ -69,26 +67,23 @@ func getRequestDS(
 	l *LLMClient,
 	question string,
 	previosMessages []SystemMessages,
-	tools *[]dsr.Tool,
-) *dsr.ChatCompletionsRequest {
-	streamEnabled := false
-
+	tools []deepseek.Tool,
+) *deepseek.ChatCompletionRequest {
 	requestMessages := getApiMessagesDS(l.systemRequestMessages)
 	// Add Previous
 	for _, prevMessage := range previosMessages {
-		requestMessages = append(requestMessages, &dsr.Message{
+		requestMessages = append(requestMessages, deepseek.ChatCompletionMessage{
 			Role:    prevMessage.Role,
 			Content: prevMessage.Content,
 		})
 	}
 	// Add question
-	requestMessages = append(requestMessages, &dsr.Message{
+	requestMessages = append(requestMessages, deepseek.ChatCompletionMessage{
 		Role:    "user",
 		Content: question,
 	})
-	return &dsr.ChatCompletionsRequest{
+	return &deepseek.ChatCompletionRequest{
 		Model:    l.model,
-		Stream:   streamEnabled,
 		Messages: requestMessages,
 		Tools:    tools,
 	}

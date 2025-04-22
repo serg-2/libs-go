@@ -3,15 +3,14 @@ package llmlib
 import (
 	"time"
 
-	"github.com/go-deepseek/deepseek"
-	"github.com/go-deepseek/deepseek/response"
+	"github.com/cohesion-org/deepseek-go"
 	"github.com/ollama/ollama/api"
 	cl "github.com/serg-2/libs-go/commonlib"
 )
 
 type LLMClient struct {
 	clientOllama          *api.Client
-	clientDS              deepseek.Client
+	clientDS              *deepseek.Client
 	model                 string
 	options               map[string]any
 	systemRequestMessages []SystemMessages
@@ -31,13 +30,11 @@ type request struct {
 }
 
 type SystemMessages struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	// Could be tool_call.name
-	Name       string `json:"name"`
+	Role       string `json:"role"`
+	Content    string `json:"content"`
 	ToolCallId string `json:"tool_call_id"`
 
-	internalDSToolCalls []*response.ToolCall
+	internalDSToolCalls []deepseek.ToolCall
 }
 
 type SystemToolCalls struct {

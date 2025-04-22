@@ -3,15 +3,14 @@ package llmlib
 import (
 	"log"
 
-	dsr "github.com/go-deepseek/deepseek/request"
-	"github.com/go-deepseek/deepseek/response"
+	"github.com/cohesion-org/deepseek-go"
 	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 func parseResult(
 	currentRequest *request,
-	choice0 *response.Choice,
-	previousMessages []*dsr.Message,
+	choice0 deepseek.Choice,
+	previousMessages []deepseek.ChatCompletionMessage,
 ) {
 	switch choice0.FinishReason {
 	case "stop":
@@ -38,52 +37,49 @@ func parseResult(
 	}
 }
 
-func DStoSystem(previousMessages []*dsr.Message) []SystemMessages {
+func DStoSystem(previousMessages []deepseek.ChatCompletionMessage) []SystemMessages {
 	var result []SystemMessages
 	for _, mess := range previousMessages {
 		result = append(result,
 			SystemMessages{
 				Role:       mess.Role,
 				Content:    mess.Content,
-				Name:       mess.Name,
-				ToolCallId: mess.ToolCallId,
+				ToolCallId: mess.ToolCallID,
 			})
 	}
 	return result
 }
 
-func SystemToDS(previousMessages []SystemMessages) []*dsr.Message {
-	var result []*dsr.Message
+func SystemToDS(previousMessages []SystemMessages) []deepseek.ChatCompletionMessage {
+	var result []deepseek.ChatCompletionMessage
 	for _, mess := range previousMessages {
 		if mess.internalDSToolCalls != nil {
 			for _, tc := range mess.internalDSToolCalls {
 				result = append(result,
-					&dsr.Message{
+					deepseek.ChatCompletionMessage{
 						Role:       "assistant",
 						Content:    "Запрашиваю выполнение функции: " + tc.Function.Name,
-						Name:       tc.Function.Name,
-						ToolCallId: tc.Id,
+						ToolCallID: tc.ID,
 					})
 			}
 		} else {
 			result = append(result,
-				&dsr.Message{
+				deepseek.ChatCompletionMessage{
 					Role:       mess.Role,
 					Content:    mess.Content,
-					Name:       mess.Name,
-					ToolCallId: mess.ToolCallId,
+					ToolCallID: mess.ToolCallId,
 				})
 		}
 	}
 	return result
 }
 
-func reparseToolCalls(toolCall []*response.ToolCall) []SystemToolCalls {
+func reparseToolCalls(toolCall []deepseek.ToolCall) []SystemToolCalls {
 	var result []SystemToolCalls
 	for _, call := range toolCall {
 		result = append(result,
 			SystemToolCalls{
-				Id:   call.Id,
+				Id:   call.ID,
 				Type: call.Type,
 				Function: SystemToolFunction{
 					Name:      call.Function.Name,

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	dsr "github.com/go-deepseek/deepseek/request"
+	"github.com/cohesion-org/deepseek-go"
 	"github.com/google/uuid"
 )
 
@@ -20,7 +20,7 @@ var availableRoles []string = []string{
 func (l *LLMClient) AddRequest(
 	question string,
 	previosMessages []SystemMessages,
-	tools *[]dsr.Tool,
+	tools []deepseek.Tool,
 	passedFunction PassedFunction,
 ) string {
 	// Validate system messages

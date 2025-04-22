@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	dsr "github.com/go-deepseek/deepseek/request"
+	"github.com/cohesion-org/deepseek-go"
 	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 func waitForAnswerDS(
-	chatRequest *dsr.ChatCompletionsRequest,
+	chatRequest *deepseek.ChatCompletionRequest,
 	ctx context.Context,
 	waitCh chan struct{},
 	l *LLMClient,
@@ -18,7 +18,7 @@ func waitForAnswerDS(
 	passedFunction PassedFunction,
 ) {
 	log.Printf("FULL Request: %s\n", js.JsonAsString(chatRequest))
-	firstResponse, err := l.clientDS.CallChatCompletionsChat(ctx, chatRequest)
+	firstResponse, err := l.clientDS.CreateChatCompletion(ctx, chatRequest)
 	log.Printf("FULL FIRST Response: %s\n", js.JsonAsString(firstResponse))
 	currentRequest := l.requests.Get(id).(request)
 	if err != nil {
@@ -30,7 +30,7 @@ func waitForAnswerDS(
 		// Check need to make functions
 		if currentRequest.resultCalls != nil {
 			// Call functions
-			var toolsAnswers []*dsr.Message
+			var toolsAnswers []deepseek.ChatCompletionMessage
 
 			toolsAnswers = append(
 				toolsAnswers,
@@ -40,25 +40,23 @@ func waitForAnswerDS(
 			for _, call := range currentRequest.resultCalls {
 				var respString string = passedFunction(call)
 				// Generate dsr message
-				tmpMessage := dsr.Message{
+				tmpMessage := deepseek.ChatCompletionMessage{
 					Role:       "tool",
 					Content:    respString,
-					Name:       call.Function.Name,
-					ToolCallId: call.Id,
+					ToolCallID: call.Id,
 				}
-				toolsAnswers = append(toolsAnswers, &tmpMessage)
+				toolsAnswers = append(toolsAnswers, tmpMessage)
 			}
 			// Summary of answer
 			log.Printf("Request with tools answer: %s\n", js.JsonAsString(toolsAnswers))
 
-			newReq := &dsr.ChatCompletionsRequest{
+			newReq := &deepseek.ChatCompletionRequest{
 				Model:    l.model,
-				Stream:   false,
 				Messages: toolsAnswers,
 				Tools:    nil,
 			}
 			// Blocking response
-			chatRespToTool, err2 := l.clientDS.CallChatCompletionsChat(ctx, newReq)
+			chatRespToTool, err2 := l.clientDS.CreateChatCompletion(ctx, newReq)
 			if err2 != nil {
 				log.Println("Error in Chat handling DS with TOOL")
 				log.Println(err2)
