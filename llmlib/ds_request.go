@@ -50,17 +50,19 @@ func waitForAnswerDS(
 			// Summary of answer
 			log.Printf("Request with tools answer: %s\n", js.JsonAsString(toolsAnswers))
 
-			newReq := &deepseek.ChatCompletionRequest{
+			requestAfterTools := &deepseek.ChatCompletionRequest{
 				Model:    l.model,
 				Messages: toolsAnswers,
 				Tools:    nil,
 			}
 			// Blocking response
-			chatRespToTool, err2 := l.clientDS.CreateChatCompletion(ctx, newReq)
+			chatRespToTool, err2 := l.clientDS.CreateChatCompletion(ctx, requestAfterTools)
 			if err2 != nil {
 				log.Println("Error in Chat handling DS with TOOL")
 				log.Println(err2)
 			}
+
+			parseResult(&currentRequest, chatRespToTool.Choices[0], requestAfterTools.Messages)
 
 			log.Printf("DS Answer after tools:\n%s\n", js.JsonAsString(chatRespToTool))
 		}
