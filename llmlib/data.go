@@ -48,4 +48,4 @@ type SystemToolFunction struct {
 	Arguments string `json:"arguments"`
 }
 
-type PassedFunction func(call SystemToolCalls) (string, bool)
+type PassedFunction func(call SystemToolCalls) (string, int)

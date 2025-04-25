@@ -44,7 +44,7 @@ func waitForAnswerDS(
 				respString, ok := passedFunction(call)
 
 				// Error.
-				if !ok {
+				if ok == -1 {
 					log.Printf("Skipping tool request as function response: %s\n", respString)
 					currentRequest.result = "DONE WITH ERROR: " + respString
 					currentRequest.duration = time.Now().Sub(currentRequest.startTime)
@@ -53,8 +53,8 @@ func waitForAnswerDS(
 					close(waitCh)
 					return
 				}
-				// Special case
-				if respString == "" {
+				// Special case empty ok answer
+				if ok == 1 {
 					currentRequest.result = "DONE with empty answer"
 					currentRequest.duration = time.Now().Sub(currentRequest.startTime)
 					currentRequest.finished = true
@@ -62,6 +62,18 @@ func waitForAnswerDS(
 					close(waitCh)
 					return
 				}
+
+				// strict ok answer
+				if ok == 2 {
+					currentRequest.result = respString
+					currentRequest.duration = time.Now().Sub(currentRequest.startTime)
+					currentRequest.finished = true
+					l.requests.Add(id, currentRequest)
+					close(waitCh)
+					return
+				}
+
+				// Ask ai for more...
 
 				// Generate dsr message
 				tmpMessage := deepseek.ChatCompletionMessage{
