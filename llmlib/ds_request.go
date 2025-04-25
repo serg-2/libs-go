@@ -43,10 +43,19 @@ func waitForAnswerDS(
 			for _, call := range currentRequest.resultCalls {
 				respString, ok := passedFunction(call)
 
-				// Special case error.
+				// Error.
 				if !ok {
 					log.Printf("Skipping tool request as function response: %s\n", respString)
 					currentRequest.result = "DONE WITH ERROR: " + respString
+					currentRequest.duration = time.Now().Sub(currentRequest.startTime)
+					currentRequest.finished = true
+					l.requests.Add(id, currentRequest)
+					close(waitCh)
+					return
+				}
+				// Special case
+				if respString == "" {
+					currentRequest.result = "DONE with empty answer"
 					currentRequest.duration = time.Now().Sub(currentRequest.startTime)
 					currentRequest.finished = true
 					l.requests.Add(id, currentRequest)
