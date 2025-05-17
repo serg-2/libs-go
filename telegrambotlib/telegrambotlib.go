@@ -29,8 +29,9 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 		return "", nil
 	}
 
-	// too many spaces
-	if len(strings.Split(message, " ")) > 20 {
+	// Too many spaces
+	if len(strings.Split(message, " ")) > MAXIMUM_SPACES_IN_COMMAND {
+		log.Printf("Too many spaces.(%d)\n", MAXIMUM_SPACES_IN_COMMAND)
 		return "", nil
 	}
 
@@ -58,7 +59,7 @@ func CheckAndGetCommand(message string, commandsP *[]CommandStruct) (string, []s
 		return "", nil
 	}
 
-	// find arguments and existence in map
+	// Find arguments and existence in map
 	argsRange, found := getCommandRange(command, commandsP)
 
 	// Check command exists
