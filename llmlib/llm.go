@@ -71,6 +71,7 @@ func (l *LLMClient) AddRequest(
 		time.Now(),
 		0,
 		waitCh,
+		0,
 		"answer is not ready",
 		[]SystemToolCalls{},
 		[]SystemMessages{},

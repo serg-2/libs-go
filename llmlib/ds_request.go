@@ -18,17 +18,27 @@ func waitForAnswerDS(
 	passedFunction PassedFunction,
 ) {
 	log.Printf("DEBUG: Full Request: %s\n", js.JsonAsString(chatRequest))
-
 	firstResponse, err := l.clientDS.CreateChatCompletion(ctx, chatRequest)
-
 	log.Printf("DEBUG: Full first Response: %s\n", js.JsonAsString(firstResponse))
 
 	currentRequest := l.requests.Get(id).(request)
+
 	if err != nil {
-		log.Println("Error in Chat handling DS")
+		log.Println("Error in Chat handling DS. Try 1")
 		log.Println(err)
-		currentRequest.result = "Error in Chat handling: " + err.Error()
-	} else {
+
+		// RETRY
+		currentRequest.numberRetries += 1
+		time.Sleep(1 * time.Second)
+		firstResponse, err = l.clientDS.CreateChatCompletion(ctx, chatRequest)
+		log.Printf("DEBUG: Full first Response. TRY 2: %s\n", js.JsonAsString(firstResponse))
+		// END RETRY
+		if err != nil {
+			currentRequest.result = "Error in Chat handling. Last Error: " + err.Error()
+		}
+	}
+
+	if err == nil {
 		parseResult(&currentRequest, firstResponse.Choices[0], chatRequest.Messages)
 		// Check need to make functions
 		if currentRequest.resultCalls != nil {
@@ -103,6 +113,7 @@ func waitForAnswerDS(
 			log.Printf("DEBUG: Answer after tools answer:\n%s\n", js.JsonAsString(chatRespToTool))
 		}
 	}
+
 	currentRequest.duration = time.Now().Sub(currentRequest.startTime)
 	currentRequest.finished = true
 	l.requests.Add(id, currentRequest)

@@ -22,6 +22,7 @@ type request struct {
 	startTime       time.Time
 	duration        time.Duration
 	finishedChannel chan struct{}
+	numberRetries   int
 
 	result      string
 	resultCalls []SystemToolCalls
