@@ -108,6 +108,15 @@ func (l *LLMClient) GetHistory(id string) []SystemMessages {
 	return tmpVal.history
 }
 
+func (l *LLMClient) GetRetries(id string) int {
+	tmpReq := l.requests.Get(id)
+	if tmpReq == nil {
+		return 0
+	}
+	tmpVal := tmpReq.(request)
+	return tmpVal.numberRetries
+}
+
 func (l *LLMClient) GetCallsFromAnswer(id string) []SystemToolCalls {
 	tmpReq := l.requests.Get(id)
 	if tmpReq == nil {
