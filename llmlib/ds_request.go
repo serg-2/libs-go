@@ -17,6 +17,7 @@ func waitForAnswerDS(
 	id string,
 	passedFunction PassedFunction,
 	sourceChatId int64,
+	senderId int64,
 ) {
 	log.Printf("DEBUG: Full Request: %s\n", js.JsonAsString(chatRequest))
 	firstResponse, err := l.clientDS.CreateChatCompletion(ctx, chatRequest)
@@ -52,7 +53,7 @@ func waitForAnswerDS(
 			)
 
 			for _, call := range currentRequest.resultCalls {
-				respString, ok := passedFunction(call, sourceChatId)
+				respString, ok := passedFunction(call, sourceChatId, senderId)
 
 				// Error.
 				if ok == -1 {
