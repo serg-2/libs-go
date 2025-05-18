@@ -18,6 +18,7 @@ var availableRoles []string = []string{
 }
 
 func (l *LLMClient) AddRequest(
+	sourceChatId int64,
 	question string,
 	previosMessages []SystemMessages,
 	tools []deepseek.Tool,
@@ -60,6 +61,7 @@ func (l *LLMClient) AddRequest(
 			l,
 			id,
 			passedFunction,
+			sourceChatId,
 		)
 	} else {
 		log.Println("Can't find clients.")

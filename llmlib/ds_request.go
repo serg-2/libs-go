@@ -16,6 +16,7 @@ func waitForAnswerDS(
 	l *LLMClient,
 	id string,
 	passedFunction PassedFunction,
+	sourceChatId int64,
 ) {
 	log.Printf("DEBUG: Full Request: %s\n", js.JsonAsString(chatRequest))
 	firstResponse, err := l.clientDS.CreateChatCompletion(ctx, chatRequest)
@@ -51,7 +52,7 @@ func waitForAnswerDS(
 			)
 
 			for _, call := range currentRequest.resultCalls {
-				respString, ok := passedFunction(call)
+				respString, ok := passedFunction(call, sourceChatId)
 
 				// Error.
 				if ok == -1 {
