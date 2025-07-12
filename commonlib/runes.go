@@ -21,7 +21,35 @@ func GetEmojiWithSelector(r rune) string {
 	return string(result)
 }
 
-func GetSubstringFromString(s string, start int, length int) string {
-	return string([]rune(s)[start:start + length])
+func GetSubstringFromStringTelegram(s string, start int, length int) string {
+	// log.Printf("Start %d,End: %d\n", start, start+length)
+	resultString := []byte{}
+	slider := 0
+	var specialCase bool
+	for i := 0; i < len(s); i++ {
+		if (s[i] & 0xc0) != 0x80 {
+			if s[i] >= 0xf0 {
+				specialCase = true
+			} else {
+				specialCase = false
+			}
+		}
+		if slider >= start && slider < start+length {
+			if specialCase {
+				resultString = append(resultString, s[i])
+				resultString = append(resultString, s[i+1])
+			} else {
+				resultString = append(resultString, s[i])
+			}
+		}
+		if (s[i] & 0xc0) != 0x80 {
+			if s[i] >= 0xf0 {
+				slider += 2
+				i++
+			} else {
+				slider += 1
+			}
+		}
+	}
+	return string(resultString)
 }
-
