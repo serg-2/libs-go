@@ -28,7 +28,7 @@ func LoadJsonFromFile[T any](file string) T {
 	}
 
 	// Validate only structs!
-	if reflect.TypeOf(loadedStructure).Kind() != reflect.Slice {
+	if !(reflect.TypeOf(loadedStructure).Kind() == reflect.Slice || reflect.TypeOf(loadedStructure).Kind() == reflect.Map) {
 		err = validator.New().Struct(loadedStructure)
 		if err != nil {
 			log.Fatalln("Error of validation: " + err.Error())
