@@ -1,6 +1,7 @@
 package telegrambotlib
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,23 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
+
+func GetPhotoFileId(photo []tgbotapi.PhotoSize) (string, error) {
+	if len(photo) < 1 {
+		return "", errors.New("Empty Photo Array.")
+	}
+
+	fileId := photo[0].FileID
+	maxFileSize := photo[0].FileSize
+
+	for i := 1; i < len(photo); i++ {
+		if photo[i].FileSize > maxFileSize {
+			maxFileSize = photo[i].FileSize
+			fileId = photo[i].FileID
+		}
+	}
+	return fileId, nil
+}
 
 func DownloadFile(fileId string, fileName string, directoryName string, bot *tgbotapi.BotAPI) error {
 	fileConfig := tgbotapi.FileConfig{FileID: fileId}
