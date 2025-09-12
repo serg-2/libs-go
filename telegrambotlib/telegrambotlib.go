@@ -139,12 +139,45 @@ func SendLowLevel(targetChatId int64, message string, bot *tgbotapi.BotAPI) {
 	bot.Send(msg)
 }
 
+func SendLowLevelMarkDown(targetChatId int64, message string, bot *tgbotapi.BotAPI, parseMode string) {
+	//	log.Printf("Full Message Size: %d\n", len(message))
+	for len(message) > MAX_MESSAGE_SIZE {
+		// Warning! Beware of splitting runes!
+		var corrector int = 0
+		for !utf8.RuneStart(message[MAX_MESSAGE_SIZE-corrector]) {
+			corrector += 1
+		}
+
+		msg := tgbotapi.NewMessage(targetChatId, message[:MAX_MESSAGE_SIZE-corrector])
+		// WARNING. Splitting using markdown! Could break markdown
+		// For Example: *vas + ya*
+		if parseMode != "" {
+			msg.ParseMode = parseMode
+		}
+		bot.Send(msg)
+		message = message[MAX_MESSAGE_SIZE-corrector:]
+		//		log.Printf("Rest Message Size: %d\n", len(message))
+	}
+	msg := tgbotapi.NewMessage(targetChatId, message)
+	if parseMode != "" {
+		msg.ParseMode = parseMode
+	}
+
+	bot.Send(msg)
+}
+
 func SendLowLevelCallback(queryId string, callBackMessage string, bot *tgbotapi.BotAPI) {
 	callbackMsg := tgbotapi.NewCallback(queryId, callBackMessage)
 	bot.Send(callbackMsg)
 }
 
-func SendLowLevelWithKeyboard(targetChatId int64, message string, bot *tgbotapi.BotAPI, keyboard tgbotapi.InlineKeyboardMarkup) {
+func SendLowLevelWithKeyboard(
+	targetChatId int64,
+	message string,
+	bot *tgbotapi.BotAPI,
+	keyboard tgbotapi.InlineKeyboardMarkup,
+	parseMode string,
+) {
 	//	log.Printf("Full Message Size: %d\n", len(message))
 	for len(message) > MAX_MESSAGE_SIZE {
 		// Warning! Beware of splitting runes!
@@ -163,6 +196,10 @@ func SendLowLevelWithKeyboard(targetChatId int64, message string, bot *tgbotapi.
 	// Check keyboard has buttons inside
 	if len(keyboard.InlineKeyboard) > 0 {
 		msg.ReplyMarkup = keyboard
+	}
+
+	if parseMode != "" {
+		msg.ParseMode = parseMode
 	}
 
 	bot.Send(msg)
@@ -217,7 +254,7 @@ func SendPictureUrl(chatId int64, link string, pictureName string, caption strin
 
 	_, err := io.Copy(&dst, response.Body)
 	if err != nil {
-		log.Println("Error copying body to buffer in sendPictureUrl", e, e.Error())
+		log.Println("Error copying body to buffer in sendPictureUrl", err, err.Error())
 		return errors.New("error copying body to buffer in sendPictureUrl")
 	}
 
