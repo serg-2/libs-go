@@ -15,6 +15,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	cl "github.com/serg-2/libs-go/commonlib"
+	js "github.com/serg-2/libs-go/jsonlib"
 )
 
 const MAXIMUM_TRACK_IN_PLAYLIST_SIZE = 7
@@ -277,24 +278,30 @@ func SendPictureUrl(chatId int64, link string, pictureName string, caption strin
 	return nil
 }
 
-func WriteLog(message tgbotapi.Update) {
-	receivedAt := message.Message.Time().Format(time.RFC3339)
+func WriteLog(update tgbotapi.Update) {
+	if update.Message == nil {
+		// Empty message
+		log.Printf("Empty Update: %s\n", js.JsonAsString(update))
+		return
+	}
+
+	receivedAt := update.Message.Time().Format(time.RFC3339)
 	//entities := message.Message.Entities
 	//log.Printf("Entities: %v\n", entities)
 	//log.Printf("Entity type: %v\n", a)
-	logMessage := receivedAt + " " + fmt.Sprintf("%d", message.Message.Chat.ID) + " " + message.Message.Text + "\n"
+	logMessage := receivedAt + " " + fmt.Sprintf("%d", update.Message.Chat.ID) + " " + update.Message.Text + "\n"
 
 	// Always defined ID + FirstName
-	path := fmt.Sprintf("%d", message.Message.From.ID) + "_"
+	path := fmt.Sprintf("%d", update.Message.From.ID) + "_"
 
-	if message.Message.From.FirstName != "" {
-		path += message.Message.From.FirstName
+	if update.Message.From.FirstName != "" {
+		path += update.Message.From.FirstName
 	}
-	if message.Message.From.LastName != "" {
-		path += message.Message.From.LastName
+	if update.Message.From.LastName != "" {
+		path += update.Message.From.LastName
 	}
-	if message.Message.From.UserName != "" {
-		path += message.Message.From.UserName
+	if update.Message.From.UserName != "" {
+		path += update.Message.From.UserName
 	}
 
 	if _, err := os.Stat("users"); os.IsNotExist(err) {
