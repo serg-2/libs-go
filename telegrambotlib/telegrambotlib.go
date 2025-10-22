@@ -454,6 +454,7 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 
 	// Add allowed updates
 	// For default behavior
+	// your bot will receive updates like message, edited_message, channel_post, edited_channel_post, inline_query, chosen_inline_result, callback_query, shipping_query, pre_checkout_query, poll, poll_answer, my_chat_member, and chat_join_request. The only update type excluded by default is chat_member.
 	webHook.AllowedUpdates = []string{}
 	// webHook.AllowedUpdates = []string{"message_reaction", "message_reaction_count", "chat_member"}
 
@@ -493,7 +494,7 @@ func BotInitializeChannel(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesC
 
 	// Add allowed updates
 	// For default behavior
-	webHook.AllowedUpdates = []string{"chat_member"}
+	webHook.AllowedUpdates = []string{"chat_member", "message"}
 
 	_, err = bot.Request(webHook)
 	if err != nil {
