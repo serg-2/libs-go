@@ -184,7 +184,7 @@ func GenerateNMEAAIS(tmp_string string) string {
 
 func GenerateNMEADepth(depth float64, offset float64, maximum int) string {
 	//Creating DEPTH MESSAGE
-	nmeaMessage := fmt.Sprintf("!SDDPT,%.1f,%.1f,%d", depth, offset, maximum)
+	nmeaMessage := fmt.Sprintf("$SDDPT,%.1f,%.1f,%d", depth, offset, maximum)
 	nmeaMessage = nmeaMessage + "*" + calculateChecksum(nmeaMessage[1:])
 	return nmeaMessage
 }
