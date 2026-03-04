@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 func EncodeType1(mmsi uint32, speed float64, longtitude float64, latitude float64, course float64, ts int) string {
 	//Message Type 1
 	_type := fmt.Sprintf("%06b", int(1))
@@ -131,7 +130,7 @@ func encodeString(sentence string) string {
 	return encodedString
 }
 
-func GenerateNMEA(tmp_string string) string {
+func GenerateNMEAAIS(tmp_string string) string {
 	in_string := []byte(tmp_string)
 	strlen := len(in_string)
 
@@ -180,6 +179,13 @@ func GenerateNMEA(tmp_string string) string {
 	nmeaMessage := "!AIVDM,1,1,," + channel + "," + armored_message + ",0"
 	nmeaMessage = nmeaMessage + "*" + calculateChecksum(nmeaMessage[1:])
 
+	return nmeaMessage
+}
+
+func GenerateNMEADepth(depth float64, offset float64, maximum int) string {
+	//Creating DEPTH MESSAGE
+	nmeaMessage := fmt.Sprintf("!SDDPT,%.1f,%.1f,%d", depth, offset, maximum)
+	nmeaMessage = nmeaMessage + "*" + calculateChecksum(nmeaMessage[1:])
 	return nmeaMessage
 }
 
