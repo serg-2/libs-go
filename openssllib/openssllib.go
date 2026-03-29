@@ -140,45 +140,59 @@ func dumpToFile(filename string, bytes []byte) {
 	}
 }
 
-func crsToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte, caKeyBytes []byte, numberOfYears int, serial *big.Int) []byte {
+func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte, caKeyBytes []byte, numberOfYears int, serial *big.Int) []byte {
 	// Load CA public key
+	log.Printf("Decoding ca cert. First line:\n%s\n", caCertBytes)
 	pemBlock, _ := pem.Decode(caCertBytes)
 	if pemBlock == nil {
 		panic("Decode CA Public key failed")
 	}
+	
+	log.Println("Parsing certificate...")
 	caCRT, err := x509.ParseCertificate(pemBlock.Bytes)
 	if err != nil {
 		panic(err)
 	}
 
 	// Load CA private key
+	log.Println("Decoding ca key...")
 	pemBlock, _ = pem.Decode(caKeyBytes)
 	if pemBlock == nil {
 		panic("Decode CA Private key failed")
 	}
+
+	log.Println("Decrypting pem block...")
 	der, err := x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
 	if err != nil {
 		fmt.Println("Error of DecryptPemBlock: ", err)
 		panic("Decode CA Private key PASSWORD failed")
 	}
+
+	log.Println("Parsing PKCS1 private key...")
 	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)
 	if err != nil {
 		panic("Parsing CA DECODED Private key PASSWORD failed")
 	}
 
 	// load client certificate request
+	log.Println("Decoding request...")
 	pemBlock, _ = pem.Decode(requestBytes)
 	if pemBlock == nil {
 		panic("Decode client certificate request failed")
 	}
+
+	log.Println("Parsing request...")
 	clientCSR, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
 		panic("Parsing client certificate request failed")
 	}
+	
+	log.Println("Checking signature client certificate...")
 	if err = clientCSR.CheckSignature(); err != nil {
 		panic("Check signature client certificate request failed")
 	}
 
+	log.Println("Creating client certificate main...")
 	// create client certificate template
 	clientCRTTemplate := x509.Certificate{
 		Signature:          clientCSR.Signature,
@@ -270,7 +284,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	}
 
 	// Loading ca key
-	log.Println("Readubg CA key...")
+	log.Println("Reading... CA key...")
 	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
 	if err != nil {
 		log.Fatal(err)
@@ -293,7 +307,8 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	serial := new(big.Int)
 	serial.SetString(string(serialBytes), 16)
 
-	certStruct.CertBytes = crsToCrtExample(caPassword, userRequestBytes, certStruct.CABytes, caKeyBytes, config.NumberOfYearsValidity, serial)
+	log.Println("Trygin to convert Certificate Signing Request to Certificate...")
+	certStruct.CertBytes = csrToCrtExample(caPassword, userRequestBytes, certStruct.CABytes, caKeyBytes, config.NumberOfYearsValidity, serial)
 
 	// Incrementing
 	serial.Add(serial, big.NewInt(1))
