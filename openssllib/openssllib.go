@@ -142,12 +142,11 @@ func dumpToFile(filename string, bytes []byte) {
 
 func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte, caKeyBytes []byte, numberOfYears int, serial *big.Int) []byte {
 	// Load CA public key
-	log.Printf("Decoding ca cert. First line:\n%s\n", caCertBytes)
 	pemBlock, _ := pem.Decode(caCertBytes)
 	if pemBlock == nil {
 		panic("Decode CA Public key failed")
 	}
-	
+
 	log.Println("Parsing certificate...")
 	caCRT, err := x509.ParseCertificate(pemBlock.Bytes)
 	if err != nil {
@@ -155,7 +154,10 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	}
 
 	// Load CA private key
-	log.Println("Decoding ca key...")
+	log.Printf(
+		"Decoding ca key. First line:\n%s\n",
+		bytes.Split(caKeyBytes, []byte("\n"))[0],
+	)
 	pemBlock, _ = pem.Decode(caKeyBytes)
 	if pemBlock == nil {
 		panic("Decode CA Private key failed")
@@ -186,7 +188,7 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	if err != nil {
 		panic("Parsing client certificate request failed")
 	}
-	
+
 	log.Println("Checking signature client certificate...")
 	if err = clientCSR.CheckSignature(); err != nil {
 		panic("Check signature client certificate request failed")
@@ -270,7 +272,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	usKeyFileName := combineFolder(config.EasyRSAFolder, config.KeyFolder, userKeyFileName)
 	log.Printf("Dumping user key to file: %s\n", usKeyFileName)
 	dumpToFile(usKeyFileName, certStruct.KeyBytes)
-	
+
 	// Dump request to File, if needed
 	reqFileName := combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName)
 	log.Printf("Dumping user request to file: %s\n", reqFileName)
