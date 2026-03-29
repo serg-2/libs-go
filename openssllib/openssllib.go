@@ -296,6 +296,45 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	var certStruct CertStruct
 	var err error
 
+	// CHECKS AND FAST EXIT
+	
+	// Reading TLS static key
+	log.Println("Reading tls static key...")
+	certStruct.TABytes, err = os.ReadFile(config.TaFileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Loading ca certificate
+	log.Println("Reading CA Cert...")
+	certStruct.CABytes, err = os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Loading ca key
+	log.Println("Reading CA key...")
+	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Load SERIAL
+	log.Printf("Loading serial from: %s\n", config.SerialFile)
+	serialBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.SerialFile))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check Config directory exists
+	log.Println("Checking and creating configs folder...")
+	err = os.MkdirAll(config.ConfigsFolder, os.ModePerm)
+	if err != nil {
+		log.Fatal("Can't create directory: " + config.ConfigsFolder)
+	}
+
+	// MAIN ------------------------------------------
+
 	// Generate Key And CertificateRequest for user
 	log.Println("Generating cert Request and key...")
 	var userRequestBytes []byte
@@ -310,27 +349,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	reqFileName := combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName)
 	log.Printf("Dumping user request to file: %s\n", reqFileName)
 	dumpToFile(reqFileName, userRequestBytes)
-
-	// Loading ca certificate
-	log.Println("Reading CA...")
-	certStruct.CABytes, err = os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Loading ca key
-	log.Println("Reading... CA key...")
-	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Load SERIAL
-	log.Printf("Loading serial from: %s\n", config.SerialFile)
-	serialBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.SerialFile))
-	if err != nil {
-		log.Fatal(err)
-	}
+	
 	// Saving old serial
 	log.Println("Saving old serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialOldFile), serialBytes)
@@ -361,30 +380,15 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertFolder, certFileName), certStruct.CertBytes)
 	log.Println("Dumping cert to serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertSerialFolder, certSerialFileName), certStruct.CertBytes)
-
-	// Check Config directory exists
-	log.Println("Checking and creating configs folder...")
-	err = os.MkdirAll(config.ConfigsFolder, os.ModePerm)
-	if err != nil {
-		log.Fatal("Can't create directory: " + config.ConfigsFolder)
-	}
-
-	// Reading TLS static key
-	log.Println("Reading tls static key...")
-	certStruct.TABytes, err = os.ReadFile(config.TaFileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	
 	log.Println("Writing using template...")
 	WriteToFileUsingTemplate(config.TemplateFilename, combineFolder(config.ConfigsFolder, configFileName), certStruct)
 
 	// Should rework for multiple templates
-	log.Println("Checking for multiple templates...")
 	if config.TemplateFilename2 != "" {
+		log.Println("Multiple templates found.")
 		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileNameAlternative), certStruct)
 	}
-
 }
 
 func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
