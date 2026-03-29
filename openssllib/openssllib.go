@@ -2,6 +2,7 @@ package openssllib
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/serg-2/certinfo"
+	"github.com/youmark/pkcs8"
 )
 
 func keyToKeyPEM(key *rsa.PrivateKey, pwd string) []byte {
@@ -154,21 +156,52 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	}
 
 	// Load CA private key
+	firstStringKey := bytes.Split(caKeyBytes, []byte("\n"))[0]
 	log.Printf(
 		"Decoding ca key. First line:\n%s\n",
-		bytes.Split(caKeyBytes, []byte("\n"))[0],
+		firstStringKey,
 	)
+
 	pemBlock, _ = pem.Decode(caKeyBytes)
 	if pemBlock == nil {
 		panic("Decode CA Private key failed")
 	}
 
-	log.Println("Decrypting pem block...")
-	der, err := x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
-	if err != nil {
-		fmt.Println("Error of DecryptPemBlock: ", err)
-		panic("Decode CA Private key PASSWORD failed")
+	var der []byte
+	if strings.Contains(string(firstStringKey), "BEGIN ENCRYPTED PRIVATE KEY") {
+		log.Println("Key is PKCS#8")
+
+		tmp_key, err := pkcs8.ParsePKCS8PrivateKey(pemBlock.Bytes, []byte(caPassword))
+		if err != nil {
+			fmt.Println("Error of DecryptPemBlock with PKCS8: ", err)
+			panic("Decode CA Private key PASSWORD failed")
+		}
+
+		switch key := tmp_key.(type) {
+		case *rsa.PrivateKey:
+			log.Println("Key is RSA")
+			der = x509.MarshalPKCS1PrivateKey(key)
+		case *ecdsa.PrivateKey:
+			log.Println("Key is ECDSA")
+			der, err = x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				panic("Error marshalling pkcs8 private key")
+			}
+		default:
+			panic("Unsupported key type")
+		}
+	} else if strings.Contains(string(firstStringKey), "BEGIN RSA PRIVATE KEY") {
+		log.Println("Key is PKCS#1")
+		der, err = x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
+		if err != nil {
+			fmt.Println("Error of DecryptPemBlock: ", err)
+			panic("Decode CA Private key PASSWORD failed")
+		}
+	} else {
+		panic("Unknown type of CA key.")
 	}
+
+	log.Println("Decrypting pem block...")
 
 	log.Println("Parsing PKCS1 private key...")
 	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)

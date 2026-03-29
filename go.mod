@@ -30,5 +30,6 @@ require (
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/uuid v1.6.0
 	github.com/ollama/ollama v0.11.9
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 	golang.org/x/sys v0.35.0 // indirect
 )
