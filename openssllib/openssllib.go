@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -133,7 +132,11 @@ func generateCertificateRequest(commonName string, clientPassword string) ([]byt
 func dumpToFile(filename string, bytes []byte) {
 	err := os.WriteFile(filename, bytes, 0644)
 	if err != nil {
-		panic(err)
+		if os.IsPermission(err) {
+			fmt.Printf("Add permission! No access to folder or file: %s\n", filename)
+		} else {
+			panic(err)
+		}
 	}
 }
 
@@ -249,24 +252,29 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	certStruct.KeyBytes, userRequestBytes = generateCertificateRequest(commonName, clientPassword)
 
 	// Dump KEY File, if needed
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, userKeyFileName), certStruct.KeyBytes)
+	usKeyFileName := combineFolder(config.EasyRSAFolder, config.KeyFolder, userKeyFileName)
+	log.Printf("Dumping user key to file: %s\n", usKeyFileName)
+	dumpToFile(usKeyFileName, certStruct.KeyBytes)
+	
 	// Dump request to File, if needed
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName), userRequestBytes)
+	reqFileName := combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName)
+	log.Printf("Dumping user request to file: %s\n", reqFileName)
+	dumpToFile(reqFileName, userRequestBytes)
 
 	// Loading ca certificate
-	certStruct.CABytes, err = ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
+	certStruct.CABytes, err = os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Loading ca key
-	caKeyBytes, err := ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
+	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Load SERIAL
-	serialBytes, err := ioutil.ReadFile(combineFolder(config.EasyRSAFolder, config.SerialFile))
+	serialBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.SerialFile))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -302,7 +310,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	}
 
 	// Reading TLS static key
-	certStruct.TABytes, err = ioutil.ReadFile(config.TaFileName)
+	certStruct.TABytes, err = os.ReadFile(config.TaFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -318,7 +326,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 
 func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
 	// load template
-	templateBytes, err := ioutil.ReadFile(template)
+	templateBytes, err := os.ReadFile(template)
 	if err != nil {
 		log.Fatal(err)
 	}
