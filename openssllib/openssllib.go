@@ -248,6 +248,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	var err error
 
 	// Generate Key And CertificateRequest for user
+	log.Println("Generating cert Request and key...")
 	var userRequestBytes []byte
 	certStruct.KeyBytes, userRequestBytes = generateCertificateRequest(commonName, clientPassword)
 
@@ -262,23 +263,27 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	dumpToFile(reqFileName, userRequestBytes)
 
 	// Loading ca certificate
+	log.Println("Reading CA...")
 	certStruct.CABytes, err = os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Loading ca key
+	log.Println("Readubg CA key...")
 	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Load SERIAL
+	log.Printf("Loading serial from: %s\n", config.SerialFile)
 	serialBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.SerialFile))
 	if err != nil {
 		log.Fatal(err)
 	}
 	// Saving old serial
+	log.Println("Saving old serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialOldFile), serialBytes)
 
 	// Creating name fore cert_serial folder
@@ -294,30 +299,38 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	serial.Add(serial, big.NewInt(1))
 
 	// Converting to HEX string with end of line
-	serialNewBytes := fmt.Sprintf("%X\n", serial)
+	serialNewString := fmt.Sprintf("%X\n", serial)
+	log.Printf("New serial: %s", serialNewString)
 
 	// Storing new serial
-	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialFile), []byte(serialNewBytes))
+	log.Println("Dumping new serial...")
+	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialFile), []byte(serialNewString))
 
 	// Dump user certificate to File, if needed
+	log.Println("Dumping cert to cert...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertFolder, certFileName), certStruct.CertBytes)
+	log.Println("Dumping cert to serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertSerialFolder, certSerialFileName), certStruct.CertBytes)
 
 	// Check Config directory exists
+	log.Println("Checking and creating configs folder...")
 	err = os.MkdirAll(config.ConfigsFolder, os.ModePerm)
 	if err != nil {
 		log.Fatal("Can't create directory: " + config.ConfigsFolder)
 	}
 
 	// Reading TLS static key
+	log.Println("Reading tls static key...")
 	certStruct.TABytes, err = os.ReadFile(config.TaFileName)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Println("Writing using template...")
 	WriteToFileUsingTemplate(config.TemplateFilename, combineFolder(config.ConfigsFolder, configFileName), certStruct)
 
 	// Should rework for multiple templates
+	log.Println("Checking for multiple templates...")
 	if config.TemplateFilename2 != "" {
 		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileNameAlternative), certStruct)
 	}
@@ -326,12 +339,14 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 
 func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
 	// load template
+	log.Println("Reading template file...")
 	templateBytes, err := os.ReadFile(template)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Create config file
+	log.Println("Creating config file...")
 	targetFile, err := os.Create(fullFileName)
 	if err != nil {
 		log.Fatal(err)
@@ -339,23 +354,28 @@ func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStr
 	defer targetFile.Close()
 
 	// Writing template
+	log.Println("WRITING MAIN TEMPLATE...")
 	targetFile.Write(templateBytes)
 
 	// Writing ca certificate
+	log.Println("WRITING CA")
 	targetFile.WriteString("<ca>\n")
 	targetFile.Write(cert.CABytes)
 	targetFile.WriteString("</ca>\n")
 
 	// Writing certificate
+	log.Println("WRITING CERT")
 	targetFile.WriteString("<cert>\n")
 	targetFile.Write(cert.CertBytes)
 	targetFile.WriteString("</cert>\n")
 
 	// Writing key
+	log.Println("WRITING KEY")
 	targetFile.WriteString("<key>\n")
 	targetFile.Write(cert.KeyBytes)
 	targetFile.WriteString("</key>\n")
 
+	log.Println("WRITING TLS")
 	targetFile.WriteString("<tls-auth>\n")
 	targetFile.Write(cert.TABytes)
 	targetFile.WriteString("</tls-auth>\n")
