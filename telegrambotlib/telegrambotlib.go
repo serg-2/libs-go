@@ -516,6 +516,24 @@ func BotInitializeCustomUpdates(config BotConfig, customUpdates []string) (*tgbo
 	return bot, updates
 }
 
+// BotInitializePoll - initialize new bot with polls
+func BotInitializePoll(config BotConfig, customUpdates []string) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
+
+	bot, err := tgbotapi.NewBotAPI(config.Token)
+	cl.ChkFatal(err)
+
+	//bot.Debug = true
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 30
+	u.AllowedUpdates = customUpdates
+	updates := bot.GetUpdatesChan(u)
+
+	return bot, updates
+}
+
 // BotInitializeChannel - initialize new bot for channel
 func BotInitializeChannel(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
 
