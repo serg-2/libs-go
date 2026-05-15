@@ -477,6 +477,45 @@ func BotInitialize(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel)
 	return bot, updates
 }
 
+// BotInitializeCustomUpdates - initialize new bot
+func BotInitializeCustomUpdates(config BotConfig, customUpdates []string) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
+
+	bot, err := tgbotapi.NewBotAPI(config.Token)
+	cl.ChkFatal(err)
+
+	//bot.Debug = true
+
+	log.Printf("Authorized on account %s", bot.Self.UserName)
+
+	// Old style init webHook
+	// _, err = bot.SetWebhook(tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, config.Certificate))
+	// New Style init webHook
+	webHook, _ := tgbotapi.NewWebhookWithCert("https://"+config.Host+":"+fmt.Sprintf("%d", config.Port)+"/"+bot.Token, tgbotapi.FilePath(config.Certificate))
+
+	// Add allowed updates
+	// For default behavior
+	// your bot will receive updates like message, edited_message, channel_post, edited_channel_post, inline_query, chosen_inline_result, callback_query, shipping_query, pre_checkout_query, poll, poll_answer, my_chat_member, and chat_join_request. The only update type excluded by default is chat_member.
+	webHook.AllowedUpdates = customUpdates
+
+	_, err = bot.Request(webHook)
+	if err != nil {
+		switch err.(type) {
+		case *tgbotapi.Error:
+			// Try one more time
+			log.Printf("Internal server error, trying one more time...\n")
+			_, err = bot.Request(webHook)
+		default:
+			cl.ChkFatal(err)
+		}
+	}
+
+	cl.ChkFatal(err)
+	updates := bot.ListenForWebhook("/" + bot.Token)
+	go http.ListenAndServeTLS(config.ListenHost+":"+fmt.Sprintf("%d", config.Port), config.Certificate, config.Key, nil)
+
+	return bot, updates
+}
+
 // BotInitializeChannel - initialize new bot for channel
 func BotInitializeChannel(config BotConfig) (*tgbotapi.BotAPI, tgbotapi.UpdatesChannel) {
 
