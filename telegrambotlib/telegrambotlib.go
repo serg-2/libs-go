@@ -526,12 +526,33 @@ func BotInitializePoll(config BotConfig, customUpdates []string) (*tgbotapi.BotA
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
+	// Dropping old webhook
+	BotDropWebhook(bot)
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
 	u.AllowedUpdates = customUpdates
 	updates := bot.GetUpdatesChan(u)
 
 	return bot, updates
+}
+
+func BotDropWebhook(bot *tgbotapi.BotAPI) {
+	// 1. Create a webhook deletion request config
+	// DropPendingUpdates = true clears the backlog of old messages
+	// so your bot doesn't crash from a flood of past events.
+	delWebhookConfig := tgbotapi.DeleteWebhookConfig{
+		DropPendingUpdates: true,
+	}
+
+	// 2. Execute the request to Telegram API
+	log.Println("Removing active webhook configuration...")
+	_, err := bot.Request(delWebhookConfig)
+	if err != nil {
+		log.Printf("Failed to delete webhook: %v\n", err)
+	} else {
+		log.Println("Webhook deleted successfully!")
+	}
 }
 
 // BotInitializeChannel - initialize new bot for channel
