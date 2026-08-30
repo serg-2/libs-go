@@ -30,7 +30,7 @@ func checkSCPResponse(r io.Reader) error {
 			if _, err := r.Read(b); err != nil || b[0] == '\n' {
 				break
 			}
-			errMsg = append(errMsg, b[0]...)
+			errMsg = append(errMsg, b[0])
 		}
 		return fmt.Errorf("сервер вернул код %d: %s", buf[0], string(errMsg))
 	}
