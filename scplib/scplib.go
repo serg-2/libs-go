@@ -1,6 +1,7 @@
 package scplib
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 )
+
+var ErrLockFound = errors.New("remote lock file detected")
 
 // SendViaScp проверяет наличие lockFile, если он есть, затем наличие файла если запрещён overwrite, и только потом отправляет его
 func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile string, overwrite bool) error {
@@ -45,7 +48,7 @@ func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile s
 		lockSession.Close()
 		if err == nil {
 			fmt.Println("[Блокировка] Обнаружена блокировка.")
-			return nil
+			return ErrLockFound
 		}
 	}
 
