@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -13,56 +14,72 @@ import (
 
 var ErrLockFound = errors.New("remote lock file detected")
 
-// SendViaScp проверяет наличие lockFile, если он есть, затем наличие файла если запрещён overwrite, и только потом отправляет его
+// Вспомогательная функция для проверки ответов по протоколу SCP
+func checkSCPResponse(r io.Reader) error {
+	buf := make([]byte, 1)
+	if _, err := r.Read(buf); err != nil {
+		return err
+	}
+
+	// 0 означает успех. 1 - предупреждение/ошибка, 2 - критическая ошибка
+	if buf[0] != 0 {
+		// Пытаемся прочитать текст ошибки до символа новой строки
+		var errMsg []byte
+		b := make([]byte, 1)
+		for {
+			if _, err := r.Read(b); err != nil || b[0] == '\n' {
+				break
+			}
+			errMsg = append(errMsg, b[0]...)
+		}
+		return fmt.Errorf("сервер вернул код %d: %s", buf[0], string(errMsg))
+	}
+	return nil
+}
+
 func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile string, overwrite bool) error {
-	// Получаем метод авторизации по системным ключам
 	authMethod, err := getSystemSshAuthMethod()
 	if err != nil {
 		return fmt.Errorf("ошибка авторизации: %w", err)
 	}
 
-	// Конфигурация SSH клиента
 	sshConfig := &ssh.ClientConfig{
-		User: sshUser,
-		Auth: []ssh.AuthMethod{
-			authMethod,
-		},
+		User:            sshUser,
+		Auth:            []ssh.AuthMethod{authMethod},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         5 * time.Second,
 	}
 
-	// Установка SSH соединения
 	client, err := ssh.Dial("tcp", sshHostPort, sshConfig)
 	if err != nil {
 		return fmt.Errorf("не удалось подключиться по SSH: %w", err)
 	}
 	defer client.Close()
 
+	// Для удаленного сервера ВСЕГДА используем path вместо filepath (чтобы избежать '\' на Windows)
+	fileName := filepath.Base(localFilePath)
+
 	if lockFile != "" {
 		lockSession, err := client.NewSession()
 		if err != nil {
 			return fmt.Errorf("не удалось создать сессию для проверки замка: %w", err)
 		}
-		lockPath := filepath.Join(remoteTargetDir, lockFile)
+		lockPath := path.Join(remoteTargetDir, lockFile)
 		err = lockSession.Run(fmt.Sprintf("test -f \"%s\"", lockPath))
 		lockSession.Close()
 		if err == nil {
 			fmt.Println("[Блокировка] Обнаружена блокировка.")
-			return ErrLockFound
+			return ErrLockFound // Убедитесь, что ErrLockFound объявлен в вашем пакете
 		}
 	}
 
-	// Извлекаем имя файла из полного пути
-	fileName := filepath.Base(localFilePath)
-	remotePath := filepath.Join(remoteTargetDir, fileName)
+	remotePath := path.Join(remoteTargetDir, fileName)
 
 	if !overwrite {
-		// Существует ли целевой файл на сервере
 		checkSession, err := client.NewSession()
 		if err != nil {
 			return fmt.Errorf("не удалось создать сессию для проверки файла: %w", err)
 		}
-		// Выполняем команду 'test -f'. Она вернет системный статус 0, если файл существует
 		err = checkSession.Run(fmt.Sprintf("test -f \"%s\"", remotePath))
 		checkSession.Close()
 		if err == nil {
@@ -71,7 +88,6 @@ func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile s
 		}
 	}
 
-	// Чтение локального файла
 	file, err := os.Open(localFilePath)
 	if err != nil {
 		return fmt.Errorf("не удалось открыть локальный файл: %w", err)
@@ -83,45 +99,54 @@ func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile s
 		return fmt.Errorf("не удалось получить информацию о локальном файле: %w", err)
 	}
 
-	// Открытие новой сессии для передачи файла по SCP
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("не удалось создать SSH сессию для SCP: %w", err)
 	}
 	defer session.Close()
 
-	// Настройка stdin для сессии, чтобы передать протокольные команды SCP
 	stdin, err := session.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("ошибка создания StdinPipe: %w", err)
 	}
 	defer stdin.Close()
 
-	// Запуск команды scp на удаленном сервере в режиме приема
-	remoteCommand := fmt.Sprintf("scp -t \"%s\"", remotePath)
+	// Получаем также Stdout, чтобы читать подтверждения (ACK) от сервера
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("ошибка создания StdoutPipe: %w", err)
+	}
+
+	// ВАЖНО: scp -t ожидает ДИРЕКТОРИЮ, а не путь к файлу
+	remoteCommand := fmt.Sprintf("scp -t \"%s\"", remoteTargetDir)
 	if err := session.Start(remoteCommand); err != nil {
 		return fmt.Errorf("не удалось запустить команду scp на сервере: %w", err)
 	}
 
-	// Протокол SCP: отправляем Unix-права, размер и имя файла
+	// 1. Отправляем протокольное описание файла
 	fmt.Fprintf(stdin, "C%04o %d %s\n", fileInfo.Mode()&os.ModePerm, fileInfo.Size(), fileName)
+	if err := checkSCPResponse(stdout); err != nil {
+		return fmt.Errorf("сервер отклонил заголовок файла: %w", err)
+	}
 
-	// Копируем содержимое файла в поток SSH
+	// 2. Копируем содержимое файла
 	_, err = io.Copy(stdin, file)
 	if err != nil {
 		return fmt.Errorf("ошибка копирования содержимого файла: %w", err)
 	}
 
-	// Отправляем нулевой байт (\x00) как знак окончания передачи файла
+	// 3. Отправляем знак окончания передачи
 	fmt.Fprint(stdin, "\x00")
-
-	// Закрываем stdin и ждем завершения удаленной команды scp
-	stdin.Close()
-	if err := session.Wait(); err != nil {
-		return fmt.Errorf("ошибка завершения сессии scp (сервер отклонил файл): %w", err)
+	if err := checkSCPResponse(stdout); err != nil {
+		return fmt.Errorf("сервер отклонил завершение передачи файла: %w", err)
 	}
 
-	fmt.Printf("Файл %s успешно отправлен на %s\n", filepath.Base(localFilePath), sshHostPort)
+	stdin.Close()
+	if err := session.Wait(); err != nil {
+		return fmt.Errorf("ошибка завершения сессии scp: %w", err)
+	}
+
+	fmt.Printf("Файл %s успешно отправлен на %s\n", fileName, sshHostPort)
 	return nil
 }
 
