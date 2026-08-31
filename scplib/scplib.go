@@ -13,6 +13,7 @@ import (
 )
 
 var ErrLockFound = errors.New("remote lock file detected")
+var ErrTooManyFiles = errors.New("too many files in dir")
 
 // Вспомогательная функция для проверки ответов по протоколу SCP
 func checkSCPResponse(r io.Reader) error {
@@ -37,7 +38,7 @@ func checkSCPResponse(r io.Reader) error {
 	return nil
 }
 
-func SendViaScp(sshUser, sshHostPort string, keyFileNames []string, localFilePath, remoteTargetDir, lockFile string, overwrite bool) error {
+func SendViaScp(sshUser, sshHostPort string, keyFileNames []string, localFilePath, remoteTargetDir, lockFile string, overwrite bool, countFiles int) error {
 	authMethod, err := getSystemSshAuthMethod(keyFileNames)
 	if err != nil {
 		return fmt.Errorf("ошибка авторизации: %w", err)
@@ -70,6 +71,31 @@ func SendViaScp(sshUser, sshHostPort string, keyFileNames []string, localFilePat
 		if err == nil {
 			fmt.Println("[Блокировка] Обнаружена блокировка.")
 			return ErrLockFound // Убедитесь, что ErrLockFound объявлен в вашем пакете
+		}
+	}
+
+	if countFiles != 0 {
+		countSession, err := client.NewSession()
+		if err != nil {
+			return fmt.Errorf("не удалось создать сессию для подсчета файлов: %w", err)
+		}
+
+		// Ищем только файлы (-type f) на первом уровне вложенности (-maxdepth 1)
+		cmd := fmt.Sprintf("find %q -maxdepth 1 -type f | wc -l", remoteTargetDir)
+		output, err := countSession.Output(cmd)
+		countSession.Close()
+		if err != nil {
+			return fmt.Errorf("не удалось выполнить команду подсчета файлов: %w", err)
+		}
+
+		var fileCount int
+		if _, err := fmt.Sscanf(string(output), "%d", &fileCount); err != nil {
+			return fmt.Errorf("не удалось распарсить количество файлов: %w", err)
+		}
+
+		if fileCount > countFiles {
+			fmt.Println("[Блокировка] Обнаружено слишком много файлов в каталоге.")
+			return ErrTooManyFiles 
 		}
 	}
 
