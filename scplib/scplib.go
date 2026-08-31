@@ -37,8 +37,8 @@ func checkSCPResponse(r io.Reader) error {
 	return nil
 }
 
-func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile string, overwrite bool) error {
-	authMethod, err := getSystemSshAuthMethod()
+func SendViaScp(sshUser, sshHostPort string, keyFileNames []string, localFilePath, remoteTargetDir, lockFile string, overwrite bool) error {
+	authMethod, err := getSystemSshAuthMethod(keyFileNames)
 	if err != nil {
 		return fmt.Errorf("ошибка авторизации: %w", err)
 	}
@@ -151,7 +151,7 @@ func SendViaScp(sshUser, sshHostPort, localFilePath, remoteTargetDir, lockFile s
 }
 
 // getSystemSshAuthMethod ищет существующие SSH-ключи в системе и возвращает метод авторизации
-func getSystemSshAuthMethod() (ssh.AuthMethod, error) {
+func getSystemSshAuthMethod(keyFileNames []string) (ssh.AuthMethod, error) {
 	// Получаем путь к домашней директории текущего пользователя системы (~/)
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -159,9 +159,10 @@ func getSystemSshAuthMethod() (ssh.AuthMethod, error) {
 	}
 
 	// Список стандартных путей к приватным ключам в порядке приоритета
-	keyPaths := []string{
-		// filepath.Join(homeDir, ".ssh", "id_ed25519"),
-		filepath.Join(homeDir, ".ssh", "id_rsa"),
+	keyPaths := make([]string, 0, len(keyFileNames))
+
+	for _, name := range keyFileNames {
+		keyPaths = append(keyPaths, filepath.Join(homeDir, ".ssh", name))
 	}
 
 	var keyBytes []byte
