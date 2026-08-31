@@ -7,10 +7,13 @@ tar -xvf LibRaw-0.22.2.tar.gz
 cd LibRaw-0.22.2
 
 # 2. Конфигурируем проект, явно указывая флаги компилятора C++
+# Может добавить --disable-examples
 ./configure --enable-static --disable-shared CXXFLAGS="-O2" LDFLAGS="-lstdc++"
 # 3. Собираем ШТАТНЫМ Makefile ТОЛЬКО саму библиотеку (это создаст правильный libraw.a)
+# make CC=g++ CXX=g++
 make lib/libraw.la
 
+# sudo make install
 sudo make install-libLTLIBRARIES install-dataDATA
 =====================================================
 wget https://github.com/mm2/Little-CMS/releases/download/lcms2.19.1/lcms2-2.19.1.tar.gz
