@@ -155,59 +155,7 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 		panic(err)
 	}
 
-	// Load CA private key
-	firstStringKey := bytes.Split(caKeyBytes, []byte("\n"))[0]
-	log.Printf(
-		"Decoding ca key. First line:\n%s\n",
-		firstStringKey,
-	)
-
-	pemBlock, _ = pem.Decode(caKeyBytes)
-	if pemBlock == nil {
-		panic("Decode CA Private key failed")
-	}
-
-	var der []byte
-	if strings.Contains(string(firstStringKey), "BEGIN ENCRYPTED PRIVATE KEY") {
-		log.Println("Key is PKCS#8")
-
-		tmp_key, err := pkcs8.ParsePKCS8PrivateKey(pemBlock.Bytes, []byte(caPassword))
-		if err != nil {
-			fmt.Println("Error of DecryptPemBlock with PKCS8: ", err)
-			panic("Decode CA Private key PASSWORD failed")
-		}
-
-		switch key := tmp_key.(type) {
-		case *rsa.PrivateKey:
-			log.Println("Key is RSA")
-			der = x509.MarshalPKCS1PrivateKey(key)
-		case *ecdsa.PrivateKey:
-			log.Println("Key is ECDSA")
-			der, err = x509.MarshalPKCS8PrivateKey(key)
-			if err != nil {
-				panic("Error marshalling pkcs8 private key")
-			}
-		default:
-			panic("Unsupported key type")
-		}
-	} else if strings.Contains(string(firstStringKey), "BEGIN RSA PRIVATE KEY") {
-		log.Println("Key is PKCS#1")
-		der, err = x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
-		if err != nil {
-			fmt.Println("Error of DecryptPemBlock: ", err)
-			panic("Decode CA Private key PASSWORD failed")
-		}
-	} else {
-		panic("Unknown type of CA key.")
-	}
-
-	log.Println("Decrypting pem block...")
-
-	log.Println("Parsing PKCS1 private key...")
-	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)
-	if err != nil {
-		panic("Parsing CA DECODED Private key PASSWORD failed")
-	}
+	var caPrivateKey *rsa.PrivateKey = loadPrivateKey(caKeyBytes, caPassword)
 
 	// load client certificate request
 	log.Println("Decoding request...")
@@ -262,6 +210,132 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 	return buffer.Bytes()
 }
 
+func loadPrivateKey(caKeyBytes []byte, caPassword string) *rsa.PrivateKey {
+	// Load CA private key
+	firstStringKey := bytes.Split(caKeyBytes, []byte("\n"))[0]
+	log.Printf(
+		"Decoding ca key. First line:\n%s\n",
+		firstStringKey,
+	)
+
+	pemBlock, _ := pem.Decode(caKeyBytes)
+	if pemBlock == nil {
+		panic("Decode CA Private key failed")
+	}
+
+	var der []byte
+	if strings.Contains(string(firstStringKey), "BEGIN ENCRYPTED PRIVATE KEY") {
+		log.Println("Key is PKCS#8")
+
+		tmp_key, err := pkcs8.ParsePKCS8PrivateKey(pemBlock.Bytes, []byte(caPassword))
+		if err != nil {
+			fmt.Println("Error of DecryptPemBlock with PKCS8: ", err)
+			panic("Decode CA Private key PASSWORD failed")
+		}
+
+		switch key := tmp_key.(type) {
+		case *rsa.PrivateKey:
+			log.Println("Key is RSA")
+			der = x509.MarshalPKCS1PrivateKey(key)
+		case *ecdsa.PrivateKey:
+			log.Println("Key is ECDSA")
+			der, err = x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				panic("Error marshalling pkcs8 private key")
+			}
+		default:
+			panic("Unsupported key type")
+		}
+	} else if strings.Contains(string(firstStringKey), "BEGIN RSA PRIVATE KEY") {
+		log.Println("Key is PKCS#1")
+		var err error
+		der, err = x509.DecryptPEMBlock(pemBlock, []byte(caPassword))
+		if err != nil {
+			fmt.Println("Error of DecryptPemBlock: ", err)
+			panic("Decode CA Private key PASSWORD failed")
+		}
+	} else {
+		panic("Unknown type of CA key.")
+	}
+
+	log.Println("Decrypting pem block...")
+
+	log.Println("Parsing PKCS1 private key...")
+	caPrivateKey, err := x509.ParsePKCS1PrivateKey(der)
+	if err != nil {
+		panic("Parsing CA DECODED Private key PASSWORD failed")
+	}
+
+	return caPrivateKey
+}
+
+// CreateCRL создает ca.crl файл на основе массива серийных номеров
+func CreateCRL(filePath string, serialNumbers []big.Int, config Openssl, caPassword string) error {
+	// get CA
+	caBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	pemBlock, _ := pem.Decode(caBytes)
+	if pemBlock == nil {
+		panic("Decode CA Public key failed")
+	}
+	log.Println("Parsing certificate...")
+	caCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		panic(err)
+	}
+
+	// Get CA Key
+	caKeyBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.KeyFolder, config.CaKeyFileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	caKey := loadPrivateKey(caKeyBytes, caPassword)
+
+	// CRL
+	var entries []x509.RevocationListEntry
+	now := time.Now()
+
+	for _, sn := range serialNumbers {
+		entries = append(entries, x509.RevocationListEntry{
+			SerialNumber:   &sn,
+			RevocationTime: now,
+		})
+	}
+
+	crlTemplate := &x509.RevocationList{
+		SignatureAlgorithm:        caCert.SignatureAlgorithm,
+		ThisUpdate:                now,
+		NextUpdate:                now.Add(10 * 365 * 24 * time.Hour),
+		RevokedCertificateEntries: entries,
+	}
+
+	// Подписываем список
+	crlBytes, err := x509.CreateRevocationList(rand.Reader, crlTemplate, caCert, caKey)
+	if err != nil {
+		return fmt.Errorf("ошибка создания CRL: %w", err)
+	}
+
+	// Записываем результат в PEM-формат для OpenVPN
+	crlFile, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("ошибка создания файла: %w", err)
+	}
+	defer crlFile.Close()
+
+	err = pem.Encode(crlFile, &pem.Block{
+		Type:  "X509 CRL",
+		Bytes: crlBytes,
+	})
+	if err != nil {
+		return fmt.Errorf("ошибка записи PEM в файл: %w", err)
+	}
+
+	return nil
+}
+
 func certInfo(rawCert []byte) string {
 	certX509, err := x509.ParseCertificate(rawCert)
 	if err != nil {
@@ -288,7 +362,6 @@ func combineFolder(folderNames ...string) string {
 
 func GenerateCert(commonName string, domainName string, clientPassword string, caPassword string, config Openssl) {
 	configFileName := commonName + domainName + ".ovpn"
-	configFileNameAlternative := commonName + "_rus" + domainName + ".ovpn"
 	userKeyFileName := commonName + ".key"
 	requestFileName := commonName + ".csr"
 	certFileName := commonName + ".crt"
@@ -297,7 +370,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	var err error
 
 	// CHECKS AND FAST EXIT
-	
+
 	// Reading TLS static key
 	log.Println("Reading tls static key...")
 	certStruct.TABytes, err = os.ReadFile(config.TaFileName)
@@ -349,7 +422,7 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	reqFileName := combineFolder(config.EasyRSAFolder, config.RequestFolder, requestFileName)
 	log.Printf("Dumping user request to file: %s\n", reqFileName)
 	dumpToFile(reqFileName, userRequestBytes)
-	
+
 	// Saving old serial
 	log.Println("Saving old serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.SerialOldFile), serialBytes)
@@ -362,7 +435,14 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	serial.SetString(string(serialBytes), 16)
 
 	log.Println("Trygin to convert Certificate Signing Request to Certificate...")
-	certStruct.CertBytes = csrToCrtExample(caPassword, userRequestBytes, certStruct.CABytes, caKeyBytes, config.NumberOfYearsValidity, serial)
+	certStruct.CertBytes = csrToCrtExample(
+		caPassword,
+		userRequestBytes,
+		certStruct.CABytes,
+		caKeyBytes,
+		config.NumberOfYearsValidity,
+		serial,
+	)
 
 	// Incrementing
 	serial.Add(serial, big.NewInt(1))
@@ -380,15 +460,9 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertFolder, certFileName), certStruct.CertBytes)
 	log.Println("Dumping cert to serial...")
 	dumpToFile(combineFolder(config.EasyRSAFolder, config.CertSerialFolder, certSerialFileName), certStruct.CertBytes)
-	
+
 	log.Println("Writing using template...")
 	WriteToFileUsingTemplate(config.TemplateFilename, combineFolder(config.ConfigsFolder, configFileName), certStruct)
-
-	// Should rework for multiple templates
-	if config.TemplateFilename2 != "" {
-		log.Println("Multiple templates found.")
-		WriteToFileUsingTemplate(config.TemplateFilename2, combineFolder(config.ConfigsFolder, configFileNameAlternative), certStruct)
-	}
 }
 
 func WriteToFileUsingTemplate(template string, fullFileName string, cert CertStruct) {
