@@ -303,7 +303,7 @@ func CreateCRL(filePath string, serialNumbers []*big.Int, config Openssl, caPass
 			SerialNumber:   sn,
 			RevocationTime: now,
 		}
-		log.Printf("Entry: %+v\n", entry)
+		// log.Printf("Entry: %+v\n", entry)
 
 		entries = append(entries, entry)
 	}
@@ -316,7 +316,7 @@ func CreateCRL(filePath string, serialNumbers []*big.Int, config Openssl, caPass
 		Number:                    big.NewInt(1),
 	}
 
-	log.Printf("Revocation list: %+v\n", crlTemplate)
+	// log.Printf("Revocation list: %+v\n", crlTemplate)
 
 	// Подписываем список
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, crlTemplate, caCert, caKey)
