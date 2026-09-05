@@ -270,7 +270,7 @@ func loadPrivateKey(caKeyBytes []byte, caPassword string) *rsa.PrivateKey {
 }
 
 // CreateCRL создает ca.crl файл на основе массива серийных номеров
-func CreateCRL(filePath string, serialNumbers []big.Int, config Openssl, caPassword string) error {
+func CreateCRL(filePath string, serialNumbers []*big.Int, config Openssl, caPassword string) error {
 	// get CA
 	caBytes, err := os.ReadFile(combineFolder(config.EasyRSAFolder, config.CaCertFileName))
 	if err != nil {
@@ -300,7 +300,7 @@ func CreateCRL(filePath string, serialNumbers []big.Int, config Openssl, caPassw
 
 	for _, sn := range serialNumbers {
 		entries = append(entries, x509.RevocationListEntry{
-			SerialNumber:   &sn,
+			SerialNumber:   sn,
 			RevocationTime: now,
 		})
 	}
