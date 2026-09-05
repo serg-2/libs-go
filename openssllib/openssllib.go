@@ -299,10 +299,13 @@ func CreateCRL(filePath string, serialNumbers []*big.Int, config Openssl, caPass
 	now := time.Now()
 
 	for _, sn := range serialNumbers {
-		entries = append(entries, x509.RevocationListEntry{
+		entry := x509.RevocationListEntry{
 			SerialNumber:   sn,
 			RevocationTime: now,
-		})
+		}
+		log.Printf("Entry: %+v\n", entry)
+
+		entries = append(entries, entry)
 	}
 
 	crlTemplate := &x509.RevocationList{
@@ -310,7 +313,10 @@ func CreateCRL(filePath string, serialNumbers []*big.Int, config Openssl, caPass
 		ThisUpdate:                now,
 		NextUpdate:                now.Add(10 * 365 * 24 * time.Hour),
 		RevokedCertificateEntries: entries,
+		Number:                    big.NewInt(1),
 	}
+
+	log.Printf("Revocation list: %+v\n", crlTemplate)
 
 	// Подписываем список
 	crlBytes, err := x509.CreateRevocationList(rand.Reader, crlTemplate, caCert, caKey)
