@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	mathrand "math/rand/v2"
 	"os"
 	"strings"
 	"time"
@@ -142,7 +143,7 @@ func dumpToFile(filename string, bytes []byte) {
 	}
 }
 
-func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte, caKeyBytes []byte, numberOfYears int, serial *big.Int) []byte {
+func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte, caKeyBytes []byte, numberOfMonths int, serial *big.Int) []byte {
 	// Load CA public key
 	pemBlock, _ := pem.Decode(caCertBytes)
 	if pemBlock == nil {
@@ -188,7 +189,7 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 		Issuer:       caCRT.Subject,
 		Subject:      clientCSR.Subject,
 		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(365 * 24 * time.Duration(numberOfYears) * time.Hour),
+		NotAfter:     time.Now().Add(365 * 24 * 12 * time.Duration(numberOfMonths) * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
@@ -441,12 +442,19 @@ func GenerateCert(commonName string, domainName string, clientPassword string, c
 	serial.SetString(string(serialBytes), 16)
 
 	log.Println("Trygin to convert Certificate Signing Request to Certificate...")
+
+	var finalNumberMonths int = config.NumberOfMonthsValidity
+
+	if config.Spread != 0 {
+		finalNumberMonths += mathrand.IntN(config.Spread)
+	}
+
 	certStruct.CertBytes = csrToCrtExample(
 		caPassword,
 		userRequestBytes,
 		certStruct.CABytes,
 		caKeyBytes,
-		config.NumberOfYearsValidity,
+		finalNumberMonths,
 		serial,
 	)
 

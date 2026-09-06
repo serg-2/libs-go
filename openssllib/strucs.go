@@ -27,7 +27,8 @@ type Openssl struct {
 	TemplateFilename2       string `json:"TemplateFilename2"`
 	CaCrlFileName           string `json:"CaCrlFileName"`
 
-	NumberOfYearsValidity int `json:"NumberOfYearsValidity"`
+	NumberOfMonthsValidity int `json:"NumberOfMonthsValidity"`
+	Spread                 int `json:"Spread"`
 }
 
 type CertStruct struct {
