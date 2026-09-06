@@ -189,7 +189,7 @@ func csrToCrtExample(caPassword string, requestBytes []byte, caCertBytes []byte,
 		Issuer:       caCRT.Subject,
 		Subject:      clientCSR.Subject,
 		NotBefore:    time.Now(),
-		NotAfter:     time.Now().Add(365 * 24 * 12 * time.Duration(numberOfMonths) * time.Hour),
+		NotAfter:     time.Now().Add(30 * 24 * time.Duration(numberOfMonths) * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
